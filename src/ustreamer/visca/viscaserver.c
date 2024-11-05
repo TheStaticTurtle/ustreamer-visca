@@ -26,6 +26,8 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
+#include "tools.h"
+
 #define _LOG_ERROR(x_msg, ...)	US_LOG_ERROR("VISCA: " x_msg, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)	US_LOG_PERROR("VISCA: " x_msg, ##__VA_ARGS__)
 #define _LOG_INFO(x_msg, ...)		US_LOG_INFO("VISCA: " x_msg, ##__VA_ARGS__)
@@ -250,6 +252,7 @@ bool us_viscaserver_handle_inquery(us_viscaserver_s *viscaserver) {
 	return false;
 }
 
+			
 
 
 bool us_viscaserver_handle_command_cam1_zoom(us_viscaserver_s *viscaserver) { return false; }
@@ -275,12 +278,12 @@ bool us_viscaserver_handle_command_pantilt_drive(us_viscaserver_s *viscaserver) 
 	setctrl_pan.id = V4L2_CID_PAN_ABSOLUTE;
 	setctrl_tilt.id = V4L2_CID_TILT_ABSOLUTE;
 
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, setctrl_pan, "PAN_ABSOLUTE (command_pantilt_drive)", setctrl_pan.value = 0);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, setctrl_tilt, "TILT_ABSOLUTE (command_pantilt_drive)", setctrl_tilt.value = 0);
 	setctrl_pan.value += 3600 * horz_speed;
 	setctrl_tilt.value += 3600 * vert_speed;
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_pan, "PAN_ABSOLUTE (command_pantilt_drive)", );
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_tilt, "TILT_ABSOLUTE (command_pantilt_drive)", );
 
 	return true;
 }
@@ -298,8 +301,8 @@ bool us_viscaserver_handle_command_pantilt_absolute(us_viscaserver_s *viscaserve
 	setctrl_tilt.id = V4L2_CID_TILT_ABSOLUTE;
 	setctrl_pan.value = 3600 * pan_degrees;
 	setctrl_tilt.value = 3600 * tilt_degrees;
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_pan, "PAN_ABSOLUTE (command_pantilt_absolute)", );
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_tilt, "TILT_ABSOLUTE (command_pantilt_absolute)", );
 
 	return true; 
 }
@@ -315,8 +318,8 @@ bool us_viscaserver_handle_command_pantilt_home(us_viscaserver_s *viscaserver ) 
 
 	setctrl_pan.value = 0;
 	setctrl_tilt.value = 0;
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_pan, "PAN_ABSOLUTE (command_pantilt_home)", );
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_tilt, "TILT_ABSOLUTE (command_pantilt_home)", );
 
 	return true;
 }
@@ -332,12 +335,11 @@ bool us_viscaserver_handle_command_pantilt_reset(us_viscaserver_s *viscaserver) 
 
 	setctrl_pan.value = 0;
 	setctrl_tilt.value = 0;
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_pan, "PAN_ABSOLUTE (command_pantilt_reset)", );
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_S_CTRL, setctrl_tilt, "TILT_ABSOLUTE (command_pantilt_reset)", );
 
 	return true;
 }
-
 
 
 bool us_viscaserver_send_reply_buffer(us_viscaserver_s *viscaserver) { 
@@ -416,8 +418,8 @@ bool us_viscaserver_handle_inquery_pantilt_pos(us_viscaserver_s *viscaserver) {
 	struct v4l2_control setctrl_tilt;
 	setctrl_pan.id = V4L2_CID_PAN_ABSOLUTE;
 	setctrl_tilt.id = V4L2_CID_TILT_ABSOLUTE;
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, &setctrl_pan);
-	ioctl(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, &setctrl_tilt);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, setctrl_pan, "PAN_ABSOLUTE (inquery_pantilt_pos)", setctrl_pan.value = 0);
+	v4l2_ioctl_try(VISCASERVER_CAMERA_FD, VIDIOC_G_CTRL, setctrl_tilt, "TILT_ABSOLUTE (inquery_pantilt_pos)", setctrl_tilt.value = 0);
 
 	int16_t pan_degrees = setctrl_pan.value / 3600;
 	int16_t tilt_degrees = setctrl_tilt.value / 3600;

@@ -20,8 +20,6 @@
 
 #define VISCASERVER_BUFFER_SIZE 128
 
-#define VISCASERVER_CAMERA_FD viscaserver->stream->cap->run->fd
-
 typedef struct {
 	struct sockaddr_storage peeraddr;
 	socklen_t peeraddr_len;
