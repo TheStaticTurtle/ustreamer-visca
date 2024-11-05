@@ -40,8 +40,9 @@
 #endif
 
 
-static us_stream_s	*_g_stream = NULL;
-static us_server_s	*_g_server = NULL;
+static us_stream_s		*_g_stream = NULL;
+static us_server_s		*_g_server = NULL;
+static us_viscaserver_s	*_g_viscaserver = NULL;
 
 
 static void _block_thread_signals(void) {
@@ -68,12 +69,21 @@ static void *_server_loop_thread(void *arg) {
 	return NULL;
 }
 
+static void *_viscaserver_loop_thread(void *arg) {
+	(void)arg;
+	US_THREAD_SETTLE("visca");
+	_block_thread_signals();
+	us_viscaserver_loop(_g_viscaserver);
+	return NULL;
+}
+
 static void _signal_handler(int signum) {
 	char *const name = us_signum_to_string(signum);
 	US_LOG_INFO_NOLOCK("===== Stopping by %s =====", name);
 	free(name);
 	us_stream_loop_break(_g_stream);
 	us_server_loop_break(_g_server);
+	us_viscaserver_loop_break(_g_viscaserver);
 }
 
 int main(int argc, char *argv[]) {
@@ -88,8 +98,9 @@ int main(int argc, char *argv[]) {
 	us_encoder_s *enc = us_encoder_init();
 	_g_stream = us_stream_init(cap, enc);
 	_g_server = us_server_init(_g_stream);
+	_g_viscaserver = us_viscaserver_init(_g_stream);
 
-	if ((exit_code = options_parse(options, cap, enc, _g_stream, _g_server)) == 0) {
+	if ((exit_code = options_parse(options, cap, enc, _g_stream, _g_server, _g_viscaserver)) == 0) {
 #		ifdef WITH_GPIO
 		us_gpio_init();
 #		endif
@@ -103,10 +114,13 @@ int main(int argc, char *argv[]) {
 
 			pthread_t stream_loop_tid;
 			pthread_t server_loop_tid;
+			pthread_t viscaserver_loop_tid;
 			US_THREAD_CREATE(stream_loop_tid, _stream_loop_thread, NULL);
 			US_THREAD_CREATE(server_loop_tid, _server_loop_thread, NULL);
+			US_THREAD_CREATE(viscaserver_loop_tid, _viscaserver_loop_thread, NULL);
 			US_THREAD_JOIN(server_loop_tid);
 			US_THREAD_JOIN(stream_loop_tid);
+			US_THREAD_JOIN(viscaserver_loop_tid);
 		}
 
 #		ifdef WITH_GPIO

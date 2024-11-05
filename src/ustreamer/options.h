@@ -51,6 +51,8 @@
 #	include "gpio/gpio.h"
 #endif
 
+#include "visca/viscaserver.h"
+
 
 typedef struct {
 	unsigned		argc;
@@ -68,4 +70,4 @@ typedef struct {
 us_options_s *us_options_init(unsigned argc, char *argv[]);
 void us_options_destroy(us_options_s *options);
 
-int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, us_stream_s *stream, us_server_s *server);
+int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, us_stream_s *stream, us_server_s *server, us_viscaserver_s *viscaserver);

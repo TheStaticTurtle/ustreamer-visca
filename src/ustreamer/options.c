@@ -114,6 +114,10 @@ enum _US_OPT_VALUES {
 	_O_GPIO_HAS_HTTP_CLIENTS,
 #	endif
 
+	_O_VISCA_HOST,
+	_O_VISCA_PORT,
+	_O_VISCA_ADDRESS,
+
 #	ifdef HAS_PDEATHSIG
 	_O_EXIT_ON_PARENT_DEATH,
 #	endif
@@ -224,6 +228,10 @@ static const struct option _LONG_OPTS[] = {
 	{"gpio-has-http-clients",	required_argument,	NULL,	_O_GPIO_HAS_HTTP_CLIENTS},
 #	endif
 
+	{"visca-host",				required_argument,	NULL,	_O_VISCA_HOST},
+	{"visca-port",				required_argument,	NULL,	_O_VISCA_PORT},
+	{"visca-address",			required_argument,	NULL,	_O_VISCA_ADDRESS},
+
 #	ifdef HAS_PDEATHSIG
 	{"exit-on-parent-death",	no_argument,		NULL,	_O_EXIT_ON_PARENT_DEATH},
 #	endif
@@ -252,7 +260,7 @@ static int _parse_resolution(const char *str, unsigned *width, unsigned *height,
 static int _check_instance_id(const char *str);
 
 static void _features(void);
-static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, const us_stream_s *stream, const us_server_s *server);
+static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, const us_stream_s *stream, const us_server_s *server, const us_viscaserver_s *viscaserver);
 
 
 us_options_s *us_options_init(unsigned argc, char *argv[]) {
@@ -285,7 +293,7 @@ void us_options_destroy(us_options_s *options) {
 }
 
 
-int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, us_stream_s *stream, us_server_s *server) {
+int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, us_stream_s *stream, us_server_s *server, us_viscaserver_s *viscaserver) {
 #	define OPT_SET(x_dest, x_value) { \
 			x_dest = x_value; \
 			break; \
@@ -483,6 +491,10 @@ int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, u
 			case _O_GPIO_HAS_HTTP_CLIENTS:	OPT_NUMBER("--gpio-has-http-clients", us_g_gpio.has_http_clients.pin, 0, 256, 0);
 #			endif
 
+			case _O_VISCA_HOST:			OPT_SET(viscaserver->host, optarg);
+			case _O_VISCA_PORT:			OPT_NUMBER("--visca-port", viscaserver->port, 1, 65535, 0);
+			case _O_VISCA_ADDRESS:		OPT_NUMBER("--visca-address", viscaserver->port, 1, 9, 1);
+
 #			ifdef HAS_PDEATHSIG
 			case _O_EXIT_ON_PARENT_DEATH:
 				if (us_process_track_parent_death() < 0) {
@@ -503,7 +515,7 @@ int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, u
 			case _O_FORCE_LOG_COLORS:	OPT_SET(us_g_log_colored, true);
 			case _O_NO_LOG_COLORS:		OPT_SET(us_g_log_colored, false);
 
-			case _O_HELP:		_help(stdout, cap, enc, stream, server); return 1;
+			case _O_HELP:		_help(stdout, cap, enc, stream, server, viscaserver); return 1;
 			case _O_VERSION:	puts(US_VERSION); return 1;
 			case _O_FEATURES:	_features(); return 1;
 
@@ -612,7 +624,7 @@ static void _features(void) {
 #	endif
 }
 
-static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, const us_stream_s *stream, const us_server_s *server) {
+static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, const us_stream_s *stream, const us_server_s *server, const us_viscaserver_s *viscaserver) {
 #	define SAY(x_msg, ...) fprintf(fp, x_msg "\n", ##__VA_ARGS__)
 	SAY("\nuStreamer - Lightweight and fast MJPEG-HTTP streamer");
 	SAY("═══════════════════════════════════════════════════");
@@ -740,6 +752,13 @@ static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, co
 	SAY("    --gpio-stream-online <pin>  ──── Set 1 while streaming. Default: disabled.\n");
 	SAY("    --gpio-has-http-clients <pin>  ─ Set 1 while stream has at least one client. Default: disabled.\n");
 #	endif
+
+	SAY("VISCA options:");
+	SAY("═════════════");
+	SAY("    --visca-host <address>  ──────── Listen on Hostname or IP. Default: %s.\n", viscaserver->host);
+	SAY("    --visca-port <N>  ────────────── Bind to this UDP port. Default: %u.\n", viscaserver->port);
+	SAY("    --visca-address <1-9>  ───────── Address of the camera. Default: %u.\n", viscaserver->camera_address);
+
 #	if (defined(HAS_PDEATHSIG) || defined(WITH_SETPROCTITLE))
 	SAY("Process options:");
 	SAY("════════════════");

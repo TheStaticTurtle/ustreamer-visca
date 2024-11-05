@@ -22,6 +22,7 @@ _USTR_SRCS = $(shell ls \
 	libs/*.c \
 	ustreamer/*.c \
 	ustreamer/http/*.c \
+	ustreamer/visca/*.c \
 	ustreamer/data/*.c \
 	ustreamer/encoders/cpu/*.c \
 	ustreamer/encoders/hw/*.c \
