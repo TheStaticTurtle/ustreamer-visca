@@ -1,0 +1,20 @@
+#pragma once
+
+#include "../viscaserver.h"
+
+bool us_viscaserver_handle_command_cam1_power(us_viscaserver_s *viscaserver);
+
+bool us_viscaserver_handle_command_cam1_zoom(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_cam1_zoomdirect(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_cam1_focus(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_cam1_focusdirect(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_cam1_focusauto(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_cam1_zoomfocusdirect(us_viscaserver_s *viscaserver);
+
+bool us_viscaserver_handle_command_pantilt_drive(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_pantilt_absolute(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_pantilt_relative(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_pantilt_home(us_viscaserver_s *viscaserver);
+bool us_viscaserver_handle_command_pantilt_reset(us_viscaserver_s *viscaserver);
+
+bool us_viscaserver_handle_command_tallylight_set(us_viscaserver_s *viscaserver);

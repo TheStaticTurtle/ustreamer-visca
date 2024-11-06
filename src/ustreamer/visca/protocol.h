@@ -1,6 +1,7 @@
 #pragma once
 
 #define VISCA_COMMAND                    0x01
+#define VISCA_COMMAND_PTZOPTICS          0x0A
 #define VISCA_INQUIRY                    0x09
 
 #define VISCA_CATEGORY_INTERFACE           0x00
@@ -37,6 +38,11 @@
 #define   VISCA_CONTROL_PANTILT_HOME         0x04
 #define   VISCA_CONTROL_PANTILT_RESET        0x05
 #define VISCA_CATEGORY_CAMERA2             0x07
+#define VISCA_CATEGORY_PTZOPTICS           0x02
+#define   VISCA_CONTROL_TALLY                0x02
+#define     VISCA_VALUE_TALLY_FLASHING       0x01
+#define     VISCA_VALUE_TALLY_SOLID          0x02
+#define     VISCA_VALUE_TALLY_OFF            0x03
 
 #define VISCA_TERMINATOR                 0xFF
 

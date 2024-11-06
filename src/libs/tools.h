@@ -72,6 +72,13 @@
 		(m_a > m_b ? m_a : m_b); \
 	})
 
+#define US_CLAMP(x, low, high) ({ \
+		__typeof__(x) __x = (x); \
+		__typeof__(low) __low = (low);\
+		__typeof__(high) __high = (high);\
+		(__x > __high ? __high : (__x < __low ? __low : __x));\
+	})
+
 #define US_ONCE_FOR(x_once, x_value, ...) { \
 		const int m_reported = (x_value); \
 		if (m_reported != (x_once)) { \

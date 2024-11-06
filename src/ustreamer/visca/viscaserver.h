@@ -16,7 +16,6 @@
 
 #include "../stream.h"
 
-#include "./protocol.h"
 
 #define VISCASERVER_BUFFER_SIZE 128
 
