@@ -26,6 +26,26 @@ inline int clamp(int d, int min, int max) {
   return t > max ? max : t;
 }
 
+inline char* buffer_to_hex(char* buffer, int len) {
+	char* str = (char*)malloc(3 * len);
+
+    const char * hex = "0123456789ABCDEF";
+    char* pin = buffer;
+    char* pout = str;
+
+	for (int i = 0; i < len; ++i) {
+        *pout++ = hex[(*pin>>4)&0xF];
+        *pout++ = hex[(*pin++)&0xF];
+        *pout++ = ' ';
+	}
+    *pout++ = hex[(*pin>>4)&0xF];
+    *pout++ = hex[(*pin)&0xF];
+    *pout = 0;
+
+
+	return str;
+}
+
 
 #define INRANGE(x, min, max) (x) >= (min) && (x) <= (max)
 
@@ -57,7 +77,5 @@ inline int clamp(int d, int min, int max) {
 																	us_viscaserver_reply_error_##error(viscaserver); \
 																	return false; \
 																}
-
-
 
 #define VISCA_4BYTES_TO_INT16(buffer, offset) (((buffer[offset] & 0x0F) << 0) | ((buffer[offset+1] & 0x0F) << 4) | ((buffer[offset+2] & 0x0F) << 8) | ((buffer[offset+3] & 0x0F) << 12))

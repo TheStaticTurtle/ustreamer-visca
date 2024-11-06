@@ -55,10 +55,7 @@ bool us_viscaserver_handle_commands(us_viscaserver_s *viscaserver) {
 		else if(vs_req_pkt_buf[3] == VISCA_CONTROL_PANTILT_HOME) 					{ return us_viscaserver_handle_command_pantilt_home(viscaserver); }
 		else if(vs_req_pkt_buf[3] == VISCA_CONTROL_PANTILT_RESET) 					{ return us_viscaserver_handle_command_pantilt_reset(viscaserver); }
 	}
-
-	_LOG_ERROR("Could find the handler for the following packet: ");
-	for (int i = 0; i < vs_req_pkt_buf_len; ++i) printf(" %02x", vs_req_pkt_buf[i]);
-	printf("\n");
+	
 	return false;
 }
 bool us_viscaserver_handle_ptzoptics_commands(us_viscaserver_s *viscaserver) {
@@ -70,9 +67,6 @@ bool us_viscaserver_handle_ptzoptics_commands(us_viscaserver_s *viscaserver) {
 		if(vs_req_pkt_buf[3] == VISCA_CONTROL_TALLY) 								{ return us_viscaserver_handle_command_tallylight_set(viscaserver); }
 	}
 
-	_LOG_ERROR("Could find the handler for the following packet: ");
-	for (int i = 0; i < vs_req_pkt_buf_len; ++i) printf(" %02x", vs_req_pkt_buf[i]);
-	printf("\n");
 	return false;
 }
 
@@ -111,8 +105,5 @@ bool us_viscaserver_handle_inqueries(us_viscaserver_s *viscaserver) {
 		if(vs_req_pkt_buf[3] == 0x12) 						{ return us_viscaserver_handle_inquery_pantilt_pos(viscaserver); }
 	}
 
-	_LOG_ERROR("Could find the handler for the following packet: ");
-	for (int i = 0; i < vs_req_pkt_buf_len; ++i) printf(" %02x", vs_req_pkt_buf[i]);
-	printf("\n");
 	return false;
 }

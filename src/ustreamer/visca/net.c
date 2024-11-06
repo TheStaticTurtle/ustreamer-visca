@@ -60,9 +60,9 @@ bool us_viscaserver_wait_for_packet(us_viscaserver_s *viscaserver) {
     vs_req_pkt_buf_len = recvfrom(run->socket_fd, vs_req_pkt_buf, VISCASERVER_BUFFER_SIZE, 0, (struct sockaddr *) &run->packet.peeraddr, &run->packet.peeraddr_len);
     if (vs_req_pkt_buf_len < 1) { return false; }
 
-	fprintf(stderr, "Recevied data len=%d data=", vs_req_pkt_buf_len);
-	for (int i = 0; i < vs_req_pkt_buf_len; ++i) fprintf(stderr, "%02x ", vs_req_pkt_buf[i]);
-	fprintf(stderr, "\n");
+	char* pkt_buf_hex = buffer_to_hex(vs_req_pkt_buf, vs_req_pkt_buf_len);
+	_LOG_DEBUG("Received packet: len=%d data=%s", vs_req_pkt_buf_len, pkt_buf_hex); 
+	free(pkt_buf_hex);
 
 	VISCASERVER_PACKET_ASSERT_MINSIZE(2)
 
@@ -73,5 +73,11 @@ bool us_viscaserver_wait_for_packet(us_viscaserver_s *viscaserver) {
 	if(vs_req_pkt_buf[1] == VISCA_COMMAND) 					{ return us_viscaserver_handle_commands(viscaserver); }
 	else if(vs_req_pkt_buf[1] == VISCA_COMMAND_PTZOPTICS)	{ return us_viscaserver_handle_ptzoptics_commands(viscaserver); }
 	else if(vs_req_pkt_buf[1] == VISCA_INQUIRY)				{ return us_viscaserver_handle_inqueries(viscaserver); }
-	else { return false; }
+	else { 
+		char* pkt_buf_hex = buffer_to_hex(vs_req_pkt_buf, vs_req_pkt_buf_len);
+		_LOG_WARN("Received packet that was not handled: len=%d data=%s", vs_req_pkt_buf_len, pkt_buf_hex); 
+		free(pkt_buf_hex);
+
+		return false; 
+	}
 }
