@@ -49,9 +49,6 @@ typedef struct us_viscasserver_sx {
 
 	char	*host;
 	uint	port;
-
-	char camera_address;
-
 } us_viscaserver_s;
 
 

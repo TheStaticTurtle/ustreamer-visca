@@ -116,7 +116,6 @@ enum _US_OPT_VALUES {
 
 	_O_VISCA_HOST,
 	_O_VISCA_PORT,
-	_O_VISCA_ADDRESS,
 
 #	ifdef HAS_PDEATHSIG
 	_O_EXIT_ON_PARENT_DEATH,
@@ -230,7 +229,6 @@ static const struct option _LONG_OPTS[] = {
 
 	{"visca-host",				required_argument,	NULL,	_O_VISCA_HOST},
 	{"visca-port",				required_argument,	NULL,	_O_VISCA_PORT},
-	{"visca-address",			required_argument,	NULL,	_O_VISCA_ADDRESS},
 
 #	ifdef HAS_PDEATHSIG
 	{"exit-on-parent-death",	no_argument,		NULL,	_O_EXIT_ON_PARENT_DEATH},
@@ -493,7 +491,6 @@ int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, u
 
 			case _O_VISCA_HOST:			OPT_SET(viscaserver->host, optarg);
 			case _O_VISCA_PORT:			OPT_NUMBER("--visca-port", viscaserver->port, 1, 65535, 0);
-			case _O_VISCA_ADDRESS:		OPT_NUMBER("--visca-address", viscaserver->port, 1, 9, 1);
 
 #			ifdef HAS_PDEATHSIG
 			case _O_EXIT_ON_PARENT_DEATH:
@@ -757,7 +754,6 @@ static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, co
 	SAY("═════════════");
 	SAY("    --visca-host <address>  ──────── Listen on Hostname or IP. Default: %s.\n", viscaserver->host);
 	SAY("    --visca-port <N>  ────────────── Bind to this UDP port. Default: %u.\n", viscaserver->port);
-	SAY("    --visca-address <1-9>  ───────── Address of the camera. Default: %u.\n", viscaserver->camera_address);
 
 #	if (defined(HAS_PDEATHSIG) || defined(WITH_SETPROCTITLE))
 	SAY("Process options:");

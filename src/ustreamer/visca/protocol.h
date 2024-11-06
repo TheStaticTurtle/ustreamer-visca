@@ -45,7 +45,6 @@
 /***************/
 
 /* specs errors: */
-#define VISCA_ERROR_MESSAGE_LENGTH       0x01
 #define VISCA_ERROR_SYNTAX               0x02
 #define VISCA_ERROR_CMD_BUFFER_FULL      0x03
 #define VISCA_ERROR_CMD_CANCELLED        0x04
