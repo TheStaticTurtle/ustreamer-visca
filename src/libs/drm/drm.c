@@ -62,8 +62,8 @@ static float _get_refresh_rate(const drmModeModeInfo *mode);
 #define _LOG_ERROR(x_msg, ...)	US_LOG_ERROR("DRM: " x_msg, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)	US_LOG_PERROR("DRM: " x_msg, ##__VA_ARGS__)
 #define _LOG_INFO(x_msg, ...)		US_LOG_INFO("DRM: " x_msg, ##__VA_ARGS__)
-#define _LOG_VERBOSE(x_msg, ...)	US_LOG_VERBOSE("DRM: " x_msg, ##__VA_ARGS__)
 #define _LOG_DEBUG(x_msg, ...)	US_LOG_DEBUG("DRM: " x_msg, ##__VA_ARGS__)
+#define _LOG_TRACE(x_msg, ...)	US_LOG_TRACE("DRM: " x_msg, ##__VA_ARGS__)
 
 
 us_drm_s *us_drm_init(void) {
@@ -112,7 +112,7 @@ int us_drm_open(us_drm_s *drm, const us_capture_s *cap) {
 		_LOG_PERROR("Can't open DRM device");
 		goto error;
 	}
-	_LOG_DEBUG("DRM device fd=%d opened", run->fd);
+	_LOG_TRACE("DRM device fd=%d opened", run->fd);
 
 	int stub = 0; // Open the real device with DMA
 	if (cap == NULL) {
@@ -125,7 +125,7 @@ int us_drm_open(us_drm_s *drm, const us_capture_s *cap) {
 	}
 
 #	define CHECK_CAP(x_cap) { \
-			_LOG_DEBUG("Checking %s ...", #x_cap); \
+			_LOG_TRACE("Checking %s ...", #x_cap); \
 			u64 m_check; \
 			if (drmGetCap(run->fd, x_cap, &m_check) < 0) { \
 				_LOG_PERROR("Can't check " #x_cap); \
@@ -161,7 +161,7 @@ int us_drm_open(us_drm_s *drm, const us_capture_s *cap) {
 	}
 
 	run->saved_crtc = drmModeGetCrtc(run->fd, run->crtc_id);
-	_LOG_DEBUG("Setting up CRTC ...");
+	_LOG_TRACE("Setting up CRTC ...");
 	if (drmModeSetCrtc(run->fd, run->crtc_id, run->bufs[0].id, 0, 0, &run->conn_id, 1, &run->mode) < 0) {
 		_LOG_PERROR("Can't set CRTC");
 		goto error;
@@ -199,7 +199,7 @@ void us_drm_close(us_drm_s *drm) {
 	}
 
 	if (run->saved_crtc != NULL) {
-		_LOG_DEBUG("Restoring CRTC ...");
+		_LOG_TRACE("Restoring CRTC ...");
 		if (drmModeSetCrtc(run->fd,
 			run->saved_crtc->crtc_id, run->saved_crtc->buffer_id,
 			run->saved_crtc->x, run->saved_crtc->y,
@@ -212,7 +212,7 @@ void us_drm_close(us_drm_s *drm) {
 	}
 
 	if (run->bufs != NULL) {
-		_LOG_DEBUG("Releasing buffers ...");
+		_LOG_TRACE("Releasing buffers ...");
 		for (uint n_buf = 0; n_buf < run->n_bufs; ++n_buf) {
 			us_drm_buffer_s *const buf = &run->bufs[n_buf];
 			if (buf->fb_added && drmModeRmFB(run->fd, buf->id) < 0) {
@@ -311,7 +311,7 @@ int us_drm_wait_for_vsync(us_drm_s *drm) {
 	FD_ZERO(&fds);
 	FD_SET(run->fd, &fds);
 
-	_LOG_DEBUG("Calling select() for VSync ...");
+	_LOG_TRACE("Calling select() for VSync ...");
 	const int result = select(run->fd + 1, &fds, NULL, NULL, &timeout);
 	if (result < 0) {
 		_LOG_PERROR("Can't select(%d) device for VSync", run->fd);
@@ -325,7 +325,7 @@ int us_drm_wait_for_vsync(us_drm_s *drm) {
 		.version = DRM_EVENT_CONTEXT_VERSION,
 		.page_flip_handler = _drm_vsync_callback,
 	};
-	_LOG_DEBUG("Handling DRM event (maybe VSync) ...");
+	_LOG_TRACE("Handling DRM event (maybe VSync) ...");
 	if (drmHandleEvent(run->fd, &ctx) < 0) {
 		_LOG_PERROR("Can't handle DRM event");
 		return -1;
@@ -341,7 +341,7 @@ static void _drm_vsync_callback(int fd, uint n_frame, uint sec, uint usec, void 
 	us_drm_buffer_s *const buf = v_buf;
 	*buf->ctx.has_vsync = true;
 	*buf->ctx.exposing_dma_fd = -1;
-	_LOG_DEBUG("Got VSync signal");
+	_LOG_TRACE("Got VSync signal");
 }
 
 int us_drm_expose_stub(us_drm_s *drm, us_drm_stub_e stub, const us_capture_s *cap) {
@@ -391,10 +391,10 @@ int us_drm_expose_stub(us_drm_s *drm, us_drm_stub_e stub, const us_capture_s *ca
 
 	run->has_vsync = false;
 
-	_LOG_DEBUG("Copying STUB frame ...")
+	_LOG_TRACE("Copying STUB frame ...")
 	memcpy(buf->data, run->ft->frame->data, US_MIN(run->ft->frame->used, buf->allocated));
 
-	_LOG_DEBUG("Exposing STUB framebuffer n_buf=%u ...", run->stub_n_buf);
+	_LOG_TRACE("Exposing STUB framebuffer n_buf=%u ...", run->stub_n_buf);
 	const int retval = drmModePageFlip(
 		run->fd, run->crtc_id, buf->id,
 		DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_PAGE_FLIP_ASYNC,
@@ -402,7 +402,7 @@ int us_drm_expose_stub(us_drm_s *drm, us_drm_stub_e stub, const us_capture_s *ca
 	if (retval < 0) {
 		_LOG_PERROR("Can't expose STUB framebuffer n_buf=%u ...", run->stub_n_buf);
 	}
-	_LOG_DEBUG("Exposed STUB framebuffer n_buf=%u", run->stub_n_buf);
+	_LOG_TRACE("Exposed STUB framebuffer n_buf=%u", run->stub_n_buf);
 
 	run->stub_n_buf = (run->stub_n_buf + 1) % run->n_bufs;
 	return retval;
@@ -425,7 +425,7 @@ int us_drm_expose_dma(us_drm_s *drm, const us_capture_hwbuf_s *hw) {
 
 	run->has_vsync = false;
 
-	_LOG_DEBUG("Exposing DMA framebuffer n_buf=%u ...", hw->buf.index);
+	_LOG_TRACE("Exposing DMA framebuffer n_buf=%u ...", hw->buf.index);
 	const int retval = drmModePageFlip(
 		run->fd, run->crtc_id, buf->id,
 		DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_PAGE_FLIP_ASYNC,
@@ -433,7 +433,7 @@ int us_drm_expose_dma(us_drm_s *drm, const us_capture_hwbuf_s *hw) {
 	if (retval < 0) {
 		_LOG_PERROR("Can't expose DMA framebuffer n_buf=%u ...", run->stub_n_buf);
 	}
-	_LOG_DEBUG("Exposed DMA framebuffer n_buf=%u", run->stub_n_buf);
+	_LOG_TRACE("Exposed DMA framebuffer n_buf=%u", run->stub_n_buf);
 	run->exposing_dma_fd = hw->dma_fd;
 	return retval;
 }
@@ -442,23 +442,23 @@ static int _drm_check_status(us_drm_s *drm) {
 	us_drm_runtime_s *run = drm->run;
 
 	if (run->status_fd < 0) {
-		_LOG_DEBUG("Trying to find status file ...");
+		_LOG_TRACE("Trying to find status file ...");
 		struct stat st;
 		if (stat(drm->path, &st) < 0) {
 			_LOG_PERROR("Can't stat() DRM device");
 			goto error;
 		}
 		const uint mi = minor(st.st_rdev);
-		_LOG_DEBUG("DRM device minor(st_rdev)=%u", mi);
+		_LOG_TRACE("DRM device minor(st_rdev)=%u", mi);
 
 		char path[128];
 		US_SNPRINTF(path, 127, "/sys/class/drm/card%u-%s/status", mi, drm->port);
-		_LOG_DEBUG("Opening status file %s ...", path);
+		_LOG_TRACE("Opening status file %s ...", path);
 		if ((run->status_fd = open(path, O_RDONLY | O_CLOEXEC)) < 0) {
 			_LOG_PERROR("Can't open status file: %s", path);
 			goto error;
 		}
-		_LOG_DEBUG("Status file fd=%d opened", run->status_fd);
+		_LOG_TRACE("Status file fd=%d opened", run->status_fd);
 	}
 
 	char status_ch;
@@ -470,7 +470,7 @@ static int _drm_check_status(us_drm_s *drm) {
 		_LOG_PERROR("Can't rewind status file");
 		goto error;
 	}
-	_LOG_DEBUG("Current display status: %c", status_ch);
+	_LOG_TRACE("Current display status: %c", status_ch);
 	return (status_ch == 'd' ? US_ERROR_NO_DEVICE : 0);
 
 error:
@@ -498,7 +498,7 @@ static int _drm_init_buffers(us_drm_s *drm, const us_capture_s *cap) {
 	const uint n_bufs = (cap == NULL ? 4 : cap->run->n_bufs);
 	const char *name = (cap == NULL ? "STUB" : "DMA");
 
-	_LOG_DEBUG("Initializing %u %s buffers ...", n_bufs, name);
+	_LOG_TRACE("Initializing %u %s buffers ...", n_bufs, name);
 
 	uint format = DRM_FORMAT_RGB888;
 
@@ -578,7 +578,7 @@ static int _drm_find_sink(us_drm_s *drm, uint width, uint height, float hz) {
 
 	run->crtc_id = 0;
 
-	_LOG_DEBUG("Trying to find the appropriate sink ...");
+	_LOG_TRACE("Trying to find the appropriate sink ...");
 
 	drmModeRes *res = drmModeGetResources(run->fd);
 	if (res == NULL) {

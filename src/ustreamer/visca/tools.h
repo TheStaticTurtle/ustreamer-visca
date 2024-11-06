@@ -10,6 +10,7 @@
 #define _LOG_INFO(x_msg, ...)		US_LOG_INFO("VISCA: " x_msg, ##__VA_ARGS__)
 #define _LOG_VERBOSE(x_msg, ...)	US_LOG_VERBOSE("VISCA: " x_msg, ##__VA_ARGS__)
 #define _LOG_DEBUG(x_msg, ...)		US_LOG_DEBUG("VISCA: " x_msg, ##__VA_ARGS__)
+#define _LOG_TRACE(x_msg, ...)		US_LOG_TRACE("VISCA: " x_msg, ##__VA_ARGS__)
 
 
 

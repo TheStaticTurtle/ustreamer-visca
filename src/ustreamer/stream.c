@@ -340,7 +340,7 @@ static void *_jpeg_thread(void *v_ctx) {
 
 		const bool update_required = (stream->jpeg_sink != NULL && us_memsink_server_check(stream->jpeg_sink, NULL));
 		if (!update_required && !_stream_has_jpeg_clients_cached(stream)) {
-			US_LOG_VERBOSE("JPEG: Passed encoding because nobody is watching");
+			US_LOG_DEBUG("JPEG: Passed encoding because nobody is watching");
 			us_capture_hwbuf_decref(hw);
 			continue;
 		}
@@ -348,7 +348,7 @@ static void *_jpeg_thread(void *v_ctx) {
 		const ldf now_ts = us_get_now_monotonic();
 		if (now_ts < grab_after_ts) {
 			fluency_passed += 1;
-			US_LOG_VERBOSE("JPEG: Passed %u frames for fluency: now=%.03Lf, grab_after=%.03Lf",
+			US_LOG_DEBUG("JPEG: Passed %u frames for fluency: now=%.03Lf, grab_after=%.03Lf",
 				fluency_passed, now_ts, grab_after_ts);
 			us_capture_hwbuf_decref(hw);
 			continue;
@@ -357,11 +357,11 @@ static void *_jpeg_thread(void *v_ctx) {
 
 		const ldf fluency_delay = us_workers_pool_get_fluency_delay(stream->enc->run->pool, wr);
 		grab_after_ts = now_ts + fluency_delay;
-		US_LOG_VERBOSE("JPEG: Fluency: delay=%.03Lf, grab_after=%.03Lf", fluency_delay, grab_after_ts);
+		US_LOG_DEBUG("JPEG: Fluency: delay=%.03Lf, grab_after=%.03Lf", fluency_delay, grab_after_ts);
 
 		job->hw = hw;
 		us_workers_pool_assign(stream->enc->run->pool, wr);
-		US_LOG_DEBUG("JPEG: Assigned new frame in buffer=%d to worker=%s", hw->buf.index, wr->name);
+		US_LOG_TRACE("JPEG: Assigned new frame in buffer=%d to worker=%s", hw->buf.index, wr->name);
 	}
 	return NULL;
 }
@@ -379,7 +379,7 @@ static void *_raw_thread(void *v_ctx) {
 		if (us_memsink_server_check(ctx->stream->raw_sink, NULL)) {
 			us_memsink_server_put(ctx->stream->raw_sink, &hw->raw, false);
 		} else {
-			US_LOG_VERBOSE("RAW: Passed publishing because nobody is watching");
+			US_LOG_DEBUG("RAW: Passed publishing because nobody is watching");
 		}
 		us_capture_hwbuf_decref(hw);
 	}
@@ -399,11 +399,11 @@ static void *_h264_thread(void *v_ctx) {
 		}
 
 		if (!us_memsink_server_check(stream->h264_sink, NULL)) {
-			US_LOG_VERBOSE("H264: Passed encoding because nobody is watching");
+			US_LOG_DEBUG("H264: Passed encoding because nobody is watching");
 			goto decref;
 		}
 		if (hw->raw.grab_ts < grab_after_ts) {
-			US_LOG_DEBUG("H264: Passed encoding for FPS limit");
+			US_LOG_TRACE("H264: Passed encoding for FPS limit");
 			goto decref;
 		}
 

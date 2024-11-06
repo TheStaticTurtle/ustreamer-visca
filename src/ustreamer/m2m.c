@@ -59,8 +59,8 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 #define _LOG_ERROR(x_msg, ...)	US_LOG_ERROR("%s: " x_msg, enc->name, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)	US_LOG_PERROR("%s: " x_msg, enc->name, ##__VA_ARGS__)
 #define _LOG_INFO(x_msg, ...)		US_LOG_INFO("%s: " x_msg, enc->name, ##__VA_ARGS__)
-#define _LOG_VERBOSE(x_msg, ...)	US_LOG_VERBOSE("%s: " x_msg, enc->name, ##__VA_ARGS__)
 #define _LOG_DEBUG(x_msg, ...)	US_LOG_DEBUG("%s: " x_msg, enc->name, ##__VA_ARGS__)
+#define _LOG_TRACE(x_msg, ...)	US_LOG_TRACE("%s: " x_msg, enc->name, ##__VA_ARGS__)
 
 
 us_m2m_encoder_s *us_m2m_h264_encoder_init(const char *name, const char *path, uint bitrate, uint gop) {
@@ -119,7 +119,7 @@ int us_m2m_encoder_compress(us_m2m_encoder_s *enc, const us_frame_s *src, us_fra
 		return -1;
 	}
 
-	_LOG_DEBUG("Compressing new frame; force_key=%d ...", force_key);
+	_LOG_TRACE("Compressing new frame; force_key=%d ...", force_key);
 
 	if (_m2m_encoder_compress_raw(enc, src, dest, force_key) < 0) {
 		_m2m_encoder_cleanup(enc);
@@ -129,7 +129,7 @@ int us_m2m_encoder_compress(us_m2m_encoder_s *enc, const us_frame_s *src, us_fra
 
 	us_frame_encoding_end(dest);
 
-	_LOG_VERBOSE("Compressed new frame: size=%zu, time=%0.3Lf, force_key=%d",
+	_LOG_DEBUG("Compressed new frame: size=%zu, time=%0.3Lf, force_key=%d",
 		dest->used, dest->encode_end_ts - dest->encode_begin_ts, force_key);
 
 	run->last_online = src->online;
@@ -188,7 +188,7 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 
 	_LOG_INFO("Configuring encoder: DMA=%d ...", dma);
 
-	_LOG_DEBUG("Encoder changes: width=%u->%u, height=%u->%u, input_format=%u->%u, stride=%u->%u, dma=%u->%u",
+	_LOG_TRACE("Encoder changes: width=%u->%u, height=%u->%u, input_format=%u->%u, stride=%u->%u, dma=%u->%u",
 		run->p_width, frame->width,
 		run->p_height, frame->height,
 		run->p_input_format, frame->format,
@@ -203,18 +203,18 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 	run->p_stride = frame->stride;
 	run->p_dma = dma;
 
-	_LOG_DEBUG("Opening encoder device ...");
+	_LOG_TRACE("Opening encoder device ...");
 	if ((run->fd = open(enc->path, O_RDWR)) < 0) {
 		_LOG_PERROR("Can't open encoder device");
 		goto error;
 	}
-	_LOG_DEBUG("Encoder device fd=%d opened", run->fd);
+	_LOG_TRACE("Encoder device fd=%d opened", run->fd);
 
 #	define SET_OPTION(x_cid, x_value) { \
 			struct v4l2_control m_ctl = {0}; \
 			m_ctl.id = x_cid; \
 			m_ctl.value = x_value; \
-			_LOG_DEBUG("Configuring option " #x_cid " ..."); \
+			_LOG_TRACE("Configuring option " #x_cid " ..."); \
 			_E_XIOCTL(VIDIOC_S_CTRL, &m_ctl, "Can't set option " #x_cid); \
 		}
 	if (enc->output_format == V4L2_PIX_FMT_H264) {
@@ -246,7 +246,7 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 		fmt.fmt.pix_mp.colorspace = V4L2_COLORSPACE_JPEG; // FIXME: Wrong colors
 		fmt.fmt.pix_mp.num_planes = 1;
 		// fmt.fmt.pix_mp.plane_fmt[0].bytesperline = run->p_stride;
-		_LOG_DEBUG("Configuring INPUT format ...");
+		_LOG_TRACE("Configuring INPUT format ...");
 		_E_XIOCTL(VIDIOC_S_FMT, &fmt, "Can't set INPUT format");
 	}
 
@@ -265,7 +265,7 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 			// https://github.com/raspberrypi/linux/pull/5232
 			fmt.fmt.pix_mp.plane_fmt[0].sizeimage = (1024 + 512) << 10; // 1.5Mb
 		}
-		_LOG_DEBUG("Configuring OUTPUT format ...");
+		_LOG_TRACE("Configuring OUTPUT format ...");
 		_E_XIOCTL(VIDIOC_S_FMT, &fmt, "Can't set OUTPUT format");
 		if (fmt.fmt.pix_mp.pixelformat != enc->output_format) {
 			char fourcc_str[8];
@@ -293,7 +293,7 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 		setfps.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 		setfps.parm.output.timeperframe.numerator = 1;
 		setfps.parm.output.timeperframe.denominator = run->fps_limit;
-		_LOG_DEBUG("Configuring INPUT FPS ...");
+		_LOG_TRACE("Configuring INPUT FPS ...");
 		_E_XIOCTL(VIDIOC_S_PARM, &setfps, "Can't set INPUT FPS");
 	}
 
@@ -312,11 +312,11 @@ static void _m2m_encoder_ensure(us_m2m_encoder_s *enc, const us_frame_s *frame) 
 
 	{
 		enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-		_LOG_DEBUG("Starting INPUT ...");
+		_LOG_TRACE("Starting INPUT ...");
 		_E_XIOCTL(VIDIOC_STREAMON, &type, "Can't start INPUT");
 
 		type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-		_LOG_DEBUG("Starting OUTPUT ...");
+		_LOG_TRACE("Starting OUTPUT ...");
 		_E_XIOCTL(VIDIOC_STREAMON, &type, "Can't start OUTPUT");
 	}
 
@@ -335,20 +335,20 @@ static int _m2m_encoder_init_buffers(
 
 	us_m2m_encoder_runtime_s *const run = enc->run;
 
-	_LOG_DEBUG("Initializing %s buffers ...", name);
+	_LOG_TRACE("Initializing %s buffers ...", name);
 
 	struct v4l2_requestbuffers req = {0};
 	req.count = 1;
 	req.type = type;
 	req.memory = (dma ? V4L2_MEMORY_DMABUF : V4L2_MEMORY_MMAP);
 
-	_LOG_DEBUG("Requesting %u %s buffers ...", req.count, name);
+	_LOG_TRACE("Requesting %u %s buffers ...", req.count, name);
 	_E_XIOCTL(VIDIOC_REQBUFS, &req, "Can't request %s buffers", name);
 	if (req.count < 1) {
 		_LOG_ERROR("Insufficient %s buffer memory: %u", name, req.count);
 		goto error;
 	}
-	_LOG_DEBUG("Got %u %s buffers", req.count, name);
+	_LOG_TRACE("Got %u %s buffers", req.count, name);
 
 	if (dma) {
 		*n_bufs_ptr = req.count;
@@ -365,10 +365,10 @@ static int _m2m_encoder_init_buffers(
 		buf.length = 1;
 		buf.m.planes = &plane;
 
-		_LOG_DEBUG("Querying %s buffer=%u ...", name, *n_bufs_ptr);
+		_LOG_TRACE("Querying %s buffer=%u ...", name, *n_bufs_ptr);
 		_E_XIOCTL(VIDIOC_QUERYBUF, &buf, "Can't query %s buffer=%u", name, *n_bufs_ptr);
 
-		_LOG_DEBUG("Mapping %s buffer=%u ...", name, *n_bufs_ptr);
+		_LOG_TRACE("Mapping %s buffer=%u ...", name, *n_bufs_ptr);
 		if (((*bufs_ptr)[*n_bufs_ptr].data = mmap(
 			NULL, plane.length,
 			PROT_READ | PROT_WRITE, MAP_SHARED,
@@ -380,10 +380,10 @@ static int _m2m_encoder_init_buffers(
 		assert((*bufs_ptr)[*n_bufs_ptr].data != NULL);
 		(*bufs_ptr)[*n_bufs_ptr].allocated = plane.length;
 
-		_LOG_DEBUG("Queuing %s buffer=%u ...", name, *n_bufs_ptr);
+		_LOG_TRACE("Queuing %s buffer=%u ...", name, *n_bufs_ptr);
 		_E_XIOCTL(VIDIOC_QBUF, &buf, "Can't queue %s buffer=%u", name, *n_bufs_ptr);
 	}
-	_LOG_DEBUG("All %s buffers are ready", name);
+	_LOG_TRACE("All %s buffers are ready", name);
 	return 0;
 
 error: // Mostly for _E_XIOCTL
@@ -399,7 +399,7 @@ static void _m2m_encoder_cleanup(us_m2m_encoder_s *enc) {
 		say = true;
 #		define STOP_STREAM(x_name, x_type) { \
 				enum v4l2_buf_type m_type_var = x_type; \
-				_LOG_DEBUG("Stopping %s ...", x_name); \
+				_LOG_TRACE("Stopping %s ...", x_name); \
 				if (us_xioctl(run->fd, VIDIOC_STREAMOFF, &m_type_var) < 0) { \
 					_LOG_PERROR("Can't stop %s", x_name); \
 				} \
@@ -453,7 +453,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 		struct v4l2_control ctl = {0};
 		ctl.id = V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME;
 		ctl.value = 1;
-		_LOG_DEBUG("Forcing keyframe ...")
+		_LOG_TRACE("Forcing keyframe ...")
 		_E_XIOCTL(VIDIOC_S_CTRL, &ctl, "Can't force keyframe");
 	}
 
@@ -468,17 +468,17 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 		input_buf.memory = V4L2_MEMORY_DMABUF;
 		input_buf.field = V4L2_FIELD_NONE;
 		input_plane.m.fd = src->dma_fd;
-		_LOG_DEBUG("Using INPUT-DMA buffer=%u", input_buf.index);
+		_LOG_TRACE("Using INPUT-DMA buffer=%u", input_buf.index);
 	} else {
 		input_buf.memory = V4L2_MEMORY_MMAP;
-		_LOG_DEBUG("Grabbing INPUT buffer ...");
+		_LOG_TRACE("Grabbing INPUT buffer ...");
 		_E_XIOCTL(VIDIOC_DQBUF, &input_buf, "Can't grab INPUT buffer");
 		if (input_buf.index >= run->n_input_bufs) {
 			_LOG_ERROR("V4L2 error: grabbed invalid INPUT: buffer=%u, n_bufs=%u",
 				input_buf.index, run->n_input_bufs);
 			goto error;
 		}
-		_LOG_DEBUG("Grabbed INPUT buffer=%u", input_buf.index);
+		_LOG_TRACE("Grabbed INPUT buffer=%u", input_buf.index);
 	}
 
 	const u64 now_ts = us_get_now_monotonic_u64();
@@ -497,7 +497,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 
 	const char *input_name = (run->p_dma ? "INPUT-DMA" : "INPUT");
 
-	_LOG_DEBUG("Sending%s %s buffer ...", (!run->p_dma ? " (releasing)" : ""), input_name);
+	_LOG_TRACE("Sending%s %s buffer ...", (!run->p_dma ? " (releasing)" : ""), input_name);
 	_E_XIOCTL(VIDIOC_QBUF, &input_buf, "Can't send %s buffer", input_name);
 
 	// Для не-DMA отправка буфера по факту являтся освобождением этого буфера
@@ -514,7 +514,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 		}
 
 		struct pollfd enc_poll = {run->fd, POLLIN, 0};
-		_LOG_DEBUG("Polling encoder ...");
+		_LOG_TRACE("Polling encoder ...");
 		if (poll(&enc_poll, 1, 1000) < 0 && errno != EINTR) {
 			_LOG_PERROR("Can't poll encoder");
 			goto error;
@@ -522,7 +522,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 
 		if (enc_poll.revents & POLLIN) {
 			if (!input_released) {
-				_LOG_DEBUG("Releasing %s buffer=%u ...", input_name, input_buf.index);
+				_LOG_TRACE("Releasing %s buffer=%u ...", input_name, input_buf.index);
 				_E_XIOCTL(VIDIOC_DQBUF, &input_buf, "Can't release %s buffer=%u",
 					input_name, input_buf.index);
 				input_released = true;
@@ -534,7 +534,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 			output_buf.memory = V4L2_MEMORY_MMAP;
 			output_buf.length = 1;
 			output_buf.m.planes = &output_plane;
-			_LOG_DEBUG("Fetching OUTPUT buffer ...");
+			_LOG_TRACE("Fetching OUTPUT buffer ...");
 			_E_XIOCTL(VIDIOC_DQBUF, &output_buf, "Can't fetch OUTPUT buffer");
 
 			bool done = false;
@@ -542,7 +542,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 				// Енкодер первый раз может выдать буфер с мусором и нулевым таймстампом,
 				// так что нужно убедиться, что мы читаем выходной буфер, соответствующий
 				// входному (с тем же таймстампом).
-				_LOG_DEBUG("Need to retry OUTPUT buffer due timestamp mismatch");
+				_LOG_TRACE("Need to retry OUTPUT buffer due timestamp mismatch");
 			} else {
 				us_frame_set_data(dest, run->output_bufs[output_buf.index].data, output_plane.bytesused);
 				dest->key = output_buf.flags & V4L2_BUF_FLAG_KEYFRAME;
@@ -550,7 +550,7 @@ static int _m2m_encoder_compress_raw(us_m2m_encoder_s *enc, const us_frame_s *sr
 				done = true;
 			}
 
-			_LOG_DEBUG("Releasing OUTPUT buffer=%u ...", output_buf.index);
+			_LOG_TRACE("Releasing OUTPUT buffer=%u ...", output_buf.index);
 			_E_XIOCTL(VIDIOC_QBUF, &output_buf, "Can't release OUTPUT buffer=%u", output_buf.index);
 
 			if (done) {

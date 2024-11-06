@@ -105,8 +105,8 @@ static char *_http_get_client_hostport(struct evhttp_request *request);
 #define _LOG_ERROR(x_msg, ...)	US_LOG_ERROR("HTTP: " x_msg, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)	US_LOG_PERROR("HTTP: " x_msg, ##__VA_ARGS__)
 #define _LOG_INFO(x_msg, ...)		US_LOG_INFO("HTTP: " x_msg, ##__VA_ARGS__)
-#define _LOG_VERBOSE(x_msg, ...)	US_LOG_VERBOSE("HTTP: " x_msg, ##__VA_ARGS__)
 #define _LOG_DEBUG(x_msg, ...)	US_LOG_DEBUG("HTTP: " x_msg, ##__VA_ARGS__)
+#define _LOG_TRACE(x_msg, ...)	US_LOG_TRACE("HTTP: " x_msg, ##__VA_ARGS__)
 
 #define _A_EVBUFFER_NEW(x_buf)						assert((x_buf = evbuffer_new()) != NULL)
 #define _A_EVBUFFER_ADD(x_buf, x_data, x_size)		assert(!evbuffer_add(x_buf, x_data, x_size))
@@ -234,7 +234,7 @@ int us_server_listen(us_server_s *server) {
 	}
 
 	if (server->unix_path[0] != '\0') {
-		_LOG_DEBUG("Binding server to UNIX socket '%s' ...", server->unix_path);
+		_LOG_TRACE("Binding server to UNIX socket '%s' ...", server->unix_path);
 		if ((run->ext_fd = us_evhttp_bind_unix(
 			run->http,
 			server->unix_path,
@@ -247,7 +247,7 @@ int us_server_listen(us_server_s *server) {
 
 #	ifdef WITH_SYSTEMD
 	} else if (server->systemd) {
-		_LOG_DEBUG("Binding HTTP to systemd socket ...");
+		_LOG_TRACE("Binding HTTP to systemd socket ...");
 		if ((run->ext_fd = us_evhttp_bind_systemd(run->http)) < 0) {
 			return -1;
 		}
@@ -255,7 +255,7 @@ int us_server_listen(us_server_s *server) {
 #	endif
 
 	} else {
-		_LOG_DEBUG("Binding HTTP to [%s]:%u ...", server->host, server->port);
+		_LOG_TRACE("Binding HTTP to [%s]:%u ...", server->host, server->port);
 		if (evhttp_bind_socket(run->http, server->host, server->port) < 0) {
 			_LOG_PERROR("Can't bind HTTP on [%s]:%u", server->host, server->port)
 			return -1;
@@ -626,7 +626,7 @@ static void _http_callback_stream(struct evhttp_request *request, void *v_server
 
 		struct bufferevent *const buf_event = evhttp_connection_get_bufferevent(conn);
 		if (server->tcp_nodelay && run->ext_fd >= 0) {
-			_LOG_DEBUG("Setting up TCP_NODELAY to the client %s ...", client->hostport);
+			_LOG_TRACE("Setting up TCP_NODELAY to the client %s ...", client->hostport);
 			const evutil_socket_t fd = bufferevent_getfd(buf_event);
 			assert(fd >= 0);
 			int on = 1;
@@ -947,7 +947,7 @@ static void _http_refresher(int fd, short what, void *v_server) {
 		stream_updated = true;
 		us_ring_consumer_release(ring, ri);
 	} else if (ex->expose_end_ts + 1 < us_get_now_monotonic()) {
-		_LOG_DEBUG("Repeating exposed ...");
+		_LOG_TRACE("Repeating exposed ...");
 		ex->expose_begin_ts = us_get_now_monotonic();
 		ex->expose_cmp_ts = ex->expose_begin_ts;
 		ex->expose_end_ts = ex->expose_begin_ts;
@@ -977,7 +977,7 @@ static void _http_refresher(int fd, short what, void *v_server) {
 static bool _expose_frame(us_server_s *server, const us_frame_s *frame) {
 	us_server_exposed_s *const ex = server->run->exposed;
 
-	_LOG_DEBUG("Updating exposed frame (online=%d) ...", frame->online);
+	_LOG_TRACE("Updating exposed frame (online=%d) ...", frame->online);
 	ex->expose_begin_ts = us_get_now_monotonic();
 
 	if (server->drop_same_frames && frame->online) {
@@ -989,13 +989,13 @@ static bool _expose_frame(us_server_s *server, const us_frame_s *frame) {
 		) {
 			ex->expose_cmp_ts = us_get_now_monotonic();
 			ex->expose_end_ts = ex->expose_cmp_ts;
-			_LOG_VERBOSE("Dropped same frame number %u; cmp_time=%.06Lf",
+			_LOG_DEBUG("Dropped same frame number %u; cmp_time=%.06Lf",
 				ex->dropped, (ex->expose_cmp_ts - ex->expose_begin_ts));
 			ex->dropped += 1;
 			return false; // Not updated
 		} else {
 			ex->expose_cmp_ts = us_get_now_monotonic();
-			_LOG_VERBOSE("Passed same frame check (need_drop=%d, maybe_same=%d); cmp_time=%.06Lf",
+			_LOG_DEBUG("Passed same frame check (need_drop=%d, maybe_same=%d); cmp_time=%.06Lf",
 				need_drop, maybe_same, (ex->expose_cmp_ts - ex->expose_begin_ts));
 		}
 	}
@@ -1012,7 +1012,7 @@ static bool _expose_frame(us_server_s *server, const us_frame_s *frame) {
 	ex->expose_cmp_ts = ex->expose_begin_ts;
 	ex->expose_end_ts = us_get_now_monotonic();
 
-	_LOG_VERBOSE("Exposed frame: online=%d, exp_time=%.06Lf",
+	_LOG_DEBUG("Exposed frame: online=%d, exp_time=%.06Lf",
 		 ex->frame->online, (ex->expose_end_ts - ex->expose_begin_ts));
 	return true; // Updated
 }

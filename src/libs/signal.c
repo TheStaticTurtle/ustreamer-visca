@@ -66,17 +66,17 @@ void us_install_signals_handler(us_signal_handler_f handler, bool ignore_sigpipe
 	    assert(!sigaddset(&sig_act.sa_mask, SIGPIPE));
 	}
 
-	US_LOG_DEBUG("Installing SIGINT handler ...");
+	US_LOG_TRACE("Installing SIGINT handler ...");
 	assert(!sigaction(SIGINT, &sig_act, NULL));
 
-	US_LOG_DEBUG("Installing SIGTERM handler ...");
+	US_LOG_TRACE("Installing SIGTERM handler ...");
 	assert(!sigaction(SIGTERM, &sig_act, NULL));
 
 	if (!ignore_sigpipe) {
-		US_LOG_DEBUG("Installing SIGPIPE handler ...");
+		US_LOG_TRACE("Installing SIGPIPE handler ...");
 		assert(!sigaction(SIGPIPE, &sig_act, NULL));
 	} else {
-		US_LOG_DEBUG("Ignoring SIGPIPE ...");
+		US_LOG_TRACE("Ignoring SIGPIPE ...");
 		assert(signal(SIGPIPE, SIG_IGN) != SIG_ERR);
 	}
 }

@@ -142,7 +142,7 @@ void us_workers_pool_assign(us_workers_pool_s *pool, us_worker_s *wr) {
 ldf us_workers_pool_get_fluency_delay(us_workers_pool_s *pool, const us_worker_s *wr) {
 	const ldf approx_job_time = pool->approx_job_time * 0.9 + wr->last_job_time * 0.1;
 
-	US_LOG_VERBOSE("Correcting pool's %s approx_job_time: %.3Lf -> %.3Lf (last_job_time=%.3Lf)",
+	US_LOG_DEBUG("Correcting pool's %s approx_job_time: %.3Lf -> %.3Lf (last_job_time=%.3Lf)",
 		pool->name, pool->approx_job_time, approx_job_time, wr->last_job_time);
 
 	pool->approx_job_time = approx_job_time;
@@ -161,10 +161,10 @@ static void *_worker_thread(void *v_worker) {
 	us_worker_s *const wr = v_worker;
 
 	US_THREAD_SETTLE("%s", wr->name);
-	US_LOG_DEBUG("Hello! I am a worker %s ^_^", wr->name);
+	US_LOG_TRACE("Hello! I am a worker %s ^_^", wr->name);
 
 	while (!atomic_load(&wr->pool->stop)) {
-		US_LOG_DEBUG("Worker %s waiting for a new job ...", wr->name);
+		US_LOG_TRACE("Worker %s waiting for a new job ...", wr->name);
 
 		US_MUTEX_LOCK(wr->has_job_mutex);
 		US_COND_WAIT_FOR(atomic_load(&wr->has_job), wr->has_job_cond, wr->has_job_mutex);
@@ -186,6 +186,6 @@ static void *_worker_thread(void *v_worker) {
 		US_COND_SIGNAL(wr->pool->free_workers_cond);
 	}
 
-	US_LOG_DEBUG("Bye-bye (worker %s)", wr->name);
+	US_LOG_TRACE("Bye-bye (worker %s)", wr->name);
 	return NULL;
 }

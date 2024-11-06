@@ -173,7 +173,7 @@ int us_memsink_server_put(us_memsink_s *sink, const us_frame_s *frame, bool *key
 	}
 
 	if (us_flock_timedwait_monotonic(sink->fd, 1) == 0) {
-		US_LOG_VERBOSE("%s-sink: >>>>> Exposing new frame ...", sink->name);
+		US_LOG_DEBUG("%s-sink: >>>>> Exposing new frame ...", sink->name);
 
 		sink->mem->id = us_get_now_id();
 		if (sink->mem->key_requested && frame->key) {
@@ -196,11 +196,11 @@ int us_memsink_server_put(us_memsink_s *sink, const us_frame_s *frame, bool *key
 			US_LOG_PERROR("%s-sink: Can't unlock memory", sink->name);
 			return -1;
 		}
-		US_LOG_VERBOSE("%s-sink: Exposed new frame; full exposition time = %.3Lf",
+		US_LOG_DEBUG("%s-sink: Exposed new frame; full exposition time = %.3Lf",
 			sink->name, us_get_now_monotonic() - now);
 
 	} else if (errno == EWOULDBLOCK) {
-		US_LOG_VERBOSE("%s-sink: ===== Shared memory is busy now; frame skipped", sink->name);
+		US_LOG_DEBUG("%s-sink: ===== Shared memory is busy now; frame skipped", sink->name);
 
 	} else {
 		US_LOG_PERROR("%s-sink: Can't lock memory", sink->name);

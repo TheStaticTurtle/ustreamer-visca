@@ -130,6 +130,7 @@ enum _US_OPT_VALUES {
 	_O_PERF,
 	_O_VERBOSE,
 	_O_DEBUG,
+	_O_TRACE,
 	_O_FORCE_LOG_COLORS,
 	_O_NO_LOG_COLORS,
 
@@ -243,6 +244,7 @@ static const struct option _LONG_OPTS[] = {
 	{"perf",					no_argument,		NULL,	_O_PERF},
 	{"verbose",					no_argument,		NULL,	_O_VERBOSE},
 	{"debug",					no_argument,		NULL,	_O_DEBUG},
+	{"trace",					no_argument,		NULL,	_O_TRACE},
 	{"force-log-colors",		no_argument,		NULL,	_O_FORCE_LOG_COLORS},
 	{"no-log-colors",			no_argument,		NULL,	_O_NO_LOG_COLORS},
 
@@ -509,6 +511,7 @@ int options_parse(us_options_s *options, us_capture_s *cap, us_encoder_s *enc, u
 			case _O_PERF:				OPT_SET(us_g_log_level, US_LOG_LEVEL_PERF);
 			case _O_VERBOSE:			OPT_SET(us_g_log_level, US_LOG_LEVEL_VERBOSE);
 			case _O_DEBUG:				OPT_SET(us_g_log_level, US_LOG_LEVEL_DEBUG);
+			case _O_TRACE:				OPT_SET(us_g_log_level, US_LOG_LEVEL_TRACE);
 			case _O_FORCE_LOG_COLORS:	OPT_SET(us_g_log_colored, true);
 			case _O_NO_LOG_COLORS:		OPT_SET(us_g_log_colored, false);
 
@@ -772,13 +775,14 @@ static void _help(FILE *fp, const us_capture_s *cap, const us_encoder_s *enc, co
 #	endif
 	SAY("Logging options:");
 	SAY("════════════════");
-	SAY("    --log-level <N>  ──── Verbosity level of messages from 0 (info) to 3 (debug).");
+	SAY("    --log-level <N>  ──── Verbosity level of messages from 0 (error) to 6 (trace).");
 	SAY("                          Enabling debugging messages can slow down the program.");
-	SAY("                          Available levels: 0 (info), 1 (performance), 2 (verbose), 3 (debug).");
+	SAY("                          Available levels: 0 (error), 1 (warn), 2 (info), 3 (verbose), 4 (performance), 5 (debug), 6 (trace).");
 	SAY("                          Default: %d.\n", us_g_log_level);
-	SAY("    --perf  ───────────── Enable performance messages (same as --log-level=1). Default: disabled.\n");
-	SAY("    --verbose  ────────── Enable verbose messages and lower (same as --log-level=2). Default: disabled.\n");
-	SAY("    --debug  ──────────── Enable debug messages and lower (same as --log-level=3). Default: disabled.\n");
+	SAY("    --verbose  ────────── Enable verbose messages and lower (same as --log-level=3). Default: disabled.\n");
+	SAY("    --perf  ───────────── Enable performance messages (same as --log-level=4). Default: disabled.\n");
+	SAY("    --debug  ──────────── Enable debug messages and lower (same as --log-level=5). Default: disabled.\n");
+	SAY("    --trace  ──────────── Enable trace messages and lower (same as --log-level=6). Default: disabled.\n");
 	SAY("    --force-log-colors  ─ Force color logging. Default: colored if stderr is a TTY.\n");
 	SAY("    --no-log-colors  ──── Disable color logging. Default: ditto.\n");
 	SAY("Help options:");

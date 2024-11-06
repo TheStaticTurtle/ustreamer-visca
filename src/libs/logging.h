@@ -41,9 +41,10 @@ enum us_log_level_t {
     US_LOG_LEVEL_ERROR,
     US_LOG_LEVEL_WARN,
     US_LOG_LEVEL_INFO,
-    US_LOG_LEVEL_PERF,
     US_LOG_LEVEL_VERBOSE,
+    US_LOG_LEVEL_PERF,
     US_LOG_LEVEL_DEBUG,
+    US_LOG_LEVEL_TRACE,
 };
 
 
@@ -70,6 +71,7 @@ extern pthread_mutex_t us_g_log_mutex;
 #define US_COLOR_RED		"\x1b[31;1m"
 #define US_COLOR_ORANGE		"\x1b[38;5;202m"
 #define US_COLOR_GREEN		"\x1b[32;1m"
+#define US_COLOR_DARK_GREEN	"\x1b[38;5;34m"
 #define US_COLOR_YELLOW		"\x1b[33;1m"
 #define US_COLOR_BLUE		"\x1b[34;1m"
 #define US_COLOR_CYAN		"\x1b[36;1m"
@@ -128,13 +130,13 @@ extern pthread_mutex_t us_g_log_mutex;
 
 #define US_LOG_WARN(x_msg, ...) { \
 		if (us_g_log_level >= US_LOG_LEVEL_WARN) { \
-			US_LOG_PRINTF(US_COLOR_ORANGE, "WARN ", "", x_msg, ##__VA_ARGS__); \
+			US_LOG_PRINTF(US_COLOR_ORANGE, "WARN ", US_COLOR_ORANGE, x_msg, ##__VA_ARGS__); \
 		} \
 	}
 
 #define US_LOG_WARN_NOLOCK(x_msg, ...) { \
 		if (us_g_log_level >= US_LOG_LEVEL_WARN) { \
-			US_LOG_PRINTF_NOLOCK(US_COLOR_ORANGE, "WARN ", "", x_msg, ##__VA_ARGS__); \
+			US_LOG_PRINTF_NOLOCK(US_COLOR_ORANGE, "WARN ", US_COLOR_ORANGE, x_msg, ##__VA_ARGS__); \
 		} \
 	}
 
@@ -151,6 +153,11 @@ extern pthread_mutex_t us_g_log_mutex;
 		} \
 	}
 
+#define US_LOG_VERBOSE(x_msg, ...) { \
+		if (us_g_log_level >= US_LOG_LEVEL_VERBOSE) { \
+			US_LOG_PRINTF(US_COLOR_DARK_GREEN, "VERB ", "", x_msg, ##__VA_ARGS__); \
+		} \
+	}
 
 #define US_LOG_PERF(x_msg, ...) { \
 		if (us_g_log_level >= US_LOG_LEVEL_PERF) { \
@@ -164,24 +171,32 @@ extern pthread_mutex_t us_g_log_mutex;
 		} \
 	}
 
-
-#define US_LOG_VERBOSE(x_msg, ...) { \
-		if (us_g_log_level >= US_LOG_LEVEL_VERBOSE) { \
-			US_LOG_PRINTF(US_COLOR_BLUE, "VERB ", US_COLOR_BLUE, x_msg, ##__VA_ARGS__); \
+#define US_LOG_DEBUG(x_msg, ...) { \
+		if (us_g_log_level >= US_LOG_LEVEL_DEBUG) { \
+			US_LOG_PRINTF(US_COLOR_CYAN, "DEBUG", US_COLOR_GRAY, x_msg, ##__VA_ARGS__); \
 		} \
 	}
 
-#define US_LOG_VERBOSE_PERROR(x_msg, ...) { \
-		if (us_g_log_level >= US_LOG_LEVEL_VERBOSE) { \
+#define US_LOG_DEBUG_PERROR(x_msg, ...) { \
+		if (us_g_log_level >= US_LOG_LEVEL_DEBUG) { \
 			char *m_perror_str = us_errno_to_string(errno); \
-			US_LOG_PRINTF(US_COLOR_BLUE, "VERB ", US_COLOR_BLUE, x_msg ": %s", ##__VA_ARGS__, m_perror_str); \
+			US_LOG_PRINTF(US_COLOR_CYAN, "DEBUG", US_COLOR_GRAY, x_msg ": %s", ##__VA_ARGS__, m_perror_str); \
+			free(m_perror_str); \
+		} \
+	}
+
+#define US_LOG_TRACE(x_msg, ...) { \
+		if (us_g_log_level >= US_LOG_LEVEL_TRACE) { \
+			US_LOG_PRINTF(US_COLOR_GRAY, "TRACE", US_COLOR_GRAY, x_msg, ##__VA_ARGS__); \
+		} \
+	}
+
+#define US_LOG_TRACE_PERROR(x_msg, ...) { \
+		if (us_g_log_level >= US_LOG_LEVEL_TRACE) { \
+			char *m_perror_str = us_errno_to_string(errno); \
+			US_LOG_PRINTF(US_COLOR_GRAY, "TRACE", US_COLOR_GRAY, x_msg ": %s", ##__VA_ARGS__, m_perror_str); \
 			free(m_perror_str); \
 		} \
 	}
 
 
-#define US_LOG_DEBUG(x_msg, ...) { \
-		if (us_g_log_level >= US_LOG_LEVEL_DEBUG) { \
-			US_LOG_PRINTF(US_COLOR_GRAY, "DEBUG", US_COLOR_GRAY, x_msg, ##__VA_ARGS__); \
-		} \
-	}

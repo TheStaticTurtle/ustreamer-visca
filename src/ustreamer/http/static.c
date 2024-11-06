@@ -41,7 +41,7 @@ char *us_find_static_file_path(const char *root_path, const char *request_path) 
 
 	char *const simplified_path = us_simplify_request_path(request_path);
 	if (simplified_path[0] == '\0') {
-		US_LOG_VERBOSE("HTTP: Invalid request path %s to static", request_path);
+		US_LOG_DEBUG("HTTP: Invalid request path %s to static", request_path);
 		goto error;
 	}
 
@@ -51,25 +51,25 @@ char *us_find_static_file_path(const char *root_path, const char *request_path) 
 	struct stat st;
 #	define LOAD_STAT { \
 			if (lstat(path, &st) < 0) { \
-				US_LOG_VERBOSE_PERROR("HTTP: Can't stat() static path %s", path); \
+				US_LOG_DEBUG_PERROR("HTTP: Can't stat() static path %s", path); \
 				goto error; \
 			} \
 		}
 	LOAD_STAT;
 	if (S_ISDIR(st.st_mode)) {
-		US_LOG_VERBOSE("HTTP: Requested static path %s is a directory, trying %s/index.html", path, path);
+		US_LOG_DEBUG("HTTP: Requested static path %s is a directory, trying %s/index.html", path, path);
 		strcat(path, "/index.html");
 		LOAD_STAT;
 	}
 #	undef LOAD_STAT
 
 	if (!S_ISREG(st.st_mode)) {
-		US_LOG_VERBOSE("HTTP: Not a regular file: %s", path);
+		US_LOG_DEBUG("HTTP: Not a regular file: %s", path);
 		goto error;
 	}
 
 	if (access(path, R_OK) < 0) {
-		US_LOG_VERBOSE_PERROR("HTTP: Can't access() R_OK file %s", path);
+		US_LOG_DEBUG_PERROR("HTTP: Can't access() R_OK file %s", path);
 		goto error;
 	}
 

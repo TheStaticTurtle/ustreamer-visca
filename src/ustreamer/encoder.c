@@ -135,7 +135,7 @@ void us_encoder_open(us_encoder_s *enc, us_capture_s *cap) {
 		}
 
 	} else if (type == US_ENCODER_TYPE_M2M_VIDEO || type == US_ENCODER_TYPE_M2M_IMAGE) {
-		US_LOG_DEBUG("Preparing M2M-%s encoder ...", (type == US_ENCODER_TYPE_M2M_VIDEO ? "VIDEO" : "IMAGE"));
+		US_LOG_TRACE("Preparing M2M-%s encoder ...", (type == US_ENCODER_TYPE_M2M_VIDEO ? "VIDEO" : "IMAGE"));
 		if (run->m2ms == NULL) {
 			US_CALLOC(run->m2ms, n_workers);
 		}
@@ -209,17 +209,17 @@ static bool _worker_run_job(us_worker_s *wr) {
 	us_frame_s *const dest = job->dest;
 
 	if (run->type == US_ENCODER_TYPE_CPU) {
-		US_LOG_VERBOSE("Compressing JPEG using CPU: worker=%s, buffer=%u",
+		US_LOG_DEBUG("Compressing JPEG using CPU: worker=%s, buffer=%u",
 			wr->name, job->hw->buf.index);
 		us_cpu_encoder_compress(src, dest, run->quality);
 
 	} else if (run->type == US_ENCODER_TYPE_HW) {
-		US_LOG_VERBOSE("Compressing JPEG using HW (just copying): worker=%s, buffer=%u",
+		US_LOG_DEBUG("Compressing JPEG using HW (just copying): worker=%s, buffer=%u",
 			wr->name, job->hw->buf.index);
 		us_hw_encoder_compress(src, dest);
 
 	} else if (run->type == US_ENCODER_TYPE_M2M_VIDEO || run->type == US_ENCODER_TYPE_M2M_IMAGE) {
-		US_LOG_VERBOSE("Compressing JPEG using M2M-%s: worker=%s, buffer=%u",
+		US_LOG_DEBUG("Compressing JPEG using M2M-%s: worker=%s, buffer=%u",
 			(run->type == US_ENCODER_TYPE_M2M_VIDEO ? "VIDEO" : "IMAGE"), wr->name, job->hw->buf.index);
 		if (us_m2m_encoder_compress(run->m2ms[wr->number], src, dest, false) < 0) {
 			goto error;
@@ -229,7 +229,7 @@ static bool _worker_run_job(us_worker_s *wr) {
 		assert(0 && "Unknown encoder type");
 	}
 
-	US_LOG_VERBOSE("Compressed new JPEG: size=%zu, time=%0.3Lf, worker=%s, buffer=%u",
+	US_LOG_DEBUG("Compressed new JPEG: size=%zu, time=%0.3Lf, worker=%s, buffer=%u",
 		job->dest->used,
 		job->dest->encode_end_ts - job->dest->encode_begin_ts,
 		wr->name,
