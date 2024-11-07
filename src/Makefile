@@ -10,12 +10,14 @@ LDFLAGS ?=
 # =====
 _USTR = ustreamer.bin
 _DUMP = ustreamer-dump.bin
+_FBCPY = ustreamer-fpcpy.bin
 _V4P = ustreamer-v4p.bin
 
 _CFLAGS = -MD -c -std=c17 -Wall -Wextra -D_GNU_SOURCE $(CFLAGS)
 
 _USTR_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic -levent -levent_pthreads
 _DUMP_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
+_FBCPY_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
 _V4P_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
 
 _USTR_SRCS = $(shell ls \
@@ -36,6 +38,11 @@ _DUMP_SRCS = $(shell ls \
 	dump/*.c \
 )
 
+_FBCPY_SRCS = $(shell ls \
+	libs/*.c \
+	fbcpy/*.c \
+)
+
 _V4P_SRCS = $(shell ls \
 	libs/*.c \
 	libs/drm/*.c \
@@ -45,8 +52,8 @@ _V4P_SRCS = $(shell ls \
 _BUILD = build
 
 
-_TARGETS = $(_USTR) $(_DUMP)
-_OBJS = $(_USTR_SRCS:%.c=$(_BUILD)/%.o) $(_DUMP_SRCS:%.c=$(_BUILD)/%.o)
+_TARGETS = $(_USTR) $(_DUMP) $(_FBCPY)
+_OBJS = $(_USTR_SRCS:%.c=$(_BUILD)/%.o) $(_DUMP_SRCS:%.c=$(_BUILD)/%.o) $(_FBCPY_SRCS:%.c=$(_BUILD)/%.o)
 
 
 define optbool
@@ -120,6 +127,10 @@ $(_DUMP): $(_DUMP_SRCS:%.c=$(_BUILD)/%.o)
 	$(info == LD $@)
 	$(ECHO) $(CC) $^ -o $@ $(_DUMP_LDFLAGS)
 
+$(_FBCPY): $(_FBCPY_SRCS:%.c=$(_BUILD)/%.o)
+	$(info == LD $@)
+	$(ECHO) $(CC) $^ -o $@ $(_FBCPY_LDFLAGS)
+
 
 $(_V4P): $(_V4P_SRCS:%.c=$(_BUILD)/%.o)
 	$(info == LD $@)
@@ -133,7 +144,7 @@ $(_BUILD)/%.o: %.c
 
 
 clean:
-	rm -rf $(_USTR) $(_DUMP) $(_V4P) $(_BUILD)
+	rm -rf $(_USTR) $(_DUMP) $(_FBCPY) $(_V4P) $(_BUILD)
 
 
 -include $(_OBJS:%.o=%.d)
