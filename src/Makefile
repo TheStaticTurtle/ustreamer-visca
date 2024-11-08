@@ -17,7 +17,7 @@ _CFLAGS = -MD -c -std=c17 -Wall -Wextra -D_GNU_SOURCE $(CFLAGS)
 
 _USTR_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic -levent -levent_pthreads
 _DUMP_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
-_FBCPY_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
+_FBCPY_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic -ldrm -lavcodec -lavformat -lavutil -lswscale
 _V4P_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic
 
 _USTR_SRCS = $(shell ls \

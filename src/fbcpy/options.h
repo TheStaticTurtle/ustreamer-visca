@@ -19,7 +19,7 @@
 #include "../libs/options.h"
 
 
-#include "fbstream.h"
+#include "drmstream.h"
 #include "audstream.h"
 
 
@@ -33,4 +33,4 @@ typedef struct {
 us_options_s *us_options_init(unsigned argc, char *argv[]);
 void us_options_destroy(us_options_s *options);
 
-int options_parse(us_options_s *options, us_fbstream_s *fbstream, us_audstream_s *audstream);
+int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream_s *audstream);

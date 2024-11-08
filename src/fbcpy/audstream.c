@@ -49,9 +49,9 @@ void us_audstream_loop(us_audstream_s *audstream) {
 
 	_LOG_INFO("Hello start");
 
-	while (!atomic_load(&run->stop)) {
+	//while (!atomic_load(&run->stop)) {
 		usleep(500 * 1000);
-	}
+	//}
 
 	_LOG_INFO("Hello end");
 	

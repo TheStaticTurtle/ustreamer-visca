@@ -52,7 +52,7 @@ static const struct option _LONG_OPTS[] = {
 };
 
 
-static void _help(FILE *fp, const us_fbstream_s *fbstream, const us_audstream_s* audstream);
+static void _help(FILE *fp, const us_drmstream_s *drmstream, const us_audstream_s* audstream);
 
 
 us_options_s *us_options_init(unsigned argc, char *argv[]) {
@@ -78,7 +78,7 @@ void us_options_destroy(us_options_s *options) {
 }
 
 
-int options_parse(us_options_s *options, us_fbstream_s *fbstream, us_audstream_s* audstream) {
+int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream_s* audstream) {
 #	define OPT_SET(x_dest, x_value) { \
 			x_dest = x_value; \
 			break; \
@@ -135,9 +135,9 @@ int options_parse(us_options_s *options, us_fbstream_s *fbstream, us_audstream_s
 
 	for (int ch; (ch = getopt_long(options->argc, options->argv_copy, short_opts, _LONG_OPTS, NULL)) >= 0;) {
 		switch (ch) {
-			case _O_FB_DEVICE:			OPT_SET(fbstream->framebuffer_path, optarg);
+			case _O_FB_DEVICE:			OPT_SET(drmstream->framebuffer_path, optarg);
 
-			case _O_RAW_SINK:			OPT_SET(fbstream->sink_raw_name, optarg);
+			case _O_RAW_SINK:			OPT_SET(drmstream->sink_raw_name, optarg);
 
 			case _O_AUDIO_DEV_IN:		OPT_SET(audstream->dev_in_name, optarg);
 			case _O_AUDIO_DEV_OUT:		OPT_SET(audstream->dev_out_name, optarg);
@@ -151,7 +151,7 @@ int options_parse(us_options_s *options, us_fbstream_s *fbstream, us_audstream_s
 			case _O_FORCE_LOG_COLORS:	OPT_SET(us_g_log_colored, true);
 			case _O_NO_LOG_COLORS:		OPT_SET(us_g_log_colored, false);
 
-			case _O_HELP:		_help(stdout, fbstream, audstream); return 1;
+			case _O_HELP:		_help(stdout, drmstream, audstream); return 1;
 			case _O_VERSION:	puts(US_VERSION); return 1;
 
 			case 0:		break;
@@ -170,15 +170,15 @@ int options_parse(us_options_s *options, us_fbstream_s *fbstream, us_audstream_s
 	return 0;
 }
 
-static void _help(FILE *fp, const us_fbstream_s *fbstream, const us_audstream_s* audstream) {
+static void _help(FILE *fp, const us_drmstream_s *drmstream, const us_audstream_s* audstream) {
 #	define SAY(x_msg, ...) fprintf(fp, x_msg "\n", ##__VA_ARGS__)
 	SAY("\nuStreamer-FBcpy - uStreamer raw sink adapter to write to the framebuffer");
 	SAY("═══════════════════════════════════════════════════");
 	SAY("Version: %s; license: GPLv3", US_VERSION);
 	SAY("Capturing options:");
 	SAY("══════════════════");
-	SAY("    -f|--fb-device </dev/path>  ────────── Path to Framebuffer device. Default: %s.\n", fbstream->framebuffer_path);
-	SAY("    -i|--raw-sink </dev/path> ──────────── Name of the raw sink from uStreamer. Default: %s.\n", fbstream->sink_raw_name);
+	SAY("    -f|--fb-device </dev/path>  ────────── Path to Framebuffer device. Default: %s.\n", drmstream->framebuffer_path);
+	SAY("    -i|--raw-sink </dev/path> ──────────── Name of the raw sink from uStreamer. Default: %s.\n", drmstream->sink_raw_name);
 	
 	//SAY("    -b|--buffers <N>  ──────────────────── The number of buffers to receive data from the device.");
 

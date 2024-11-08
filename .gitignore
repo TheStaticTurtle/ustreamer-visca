@@ -18,3 +18,4 @@ vgcore.*
 *.pkg.tar.zst
 *.tar.gz
 *.code-workspace
+NOTES.md
