@@ -16,10 +16,14 @@ struct dumb_framebuffer {
 };
 
 
-
 typedef struct {
+	char* 		card_path;
 	int			fd;
 	
+	uint32_t requested_width;
+	uint32_t requested_height;
+	uint32_t requested_rate;
+
 	uint32_t connector_id;
 	uint32_t crtc_id;
 	drmModeCrtc* old_crtc;
@@ -30,7 +34,7 @@ typedef struct {
 	
 } us_drm_state_s;
 
-us_drm_state_s* drm_init(char* card);
+us_drm_state_s* drm_init();
 
 void drm_destroy(us_drm_state_s* state);
 

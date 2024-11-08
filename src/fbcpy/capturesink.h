@@ -15,34 +15,40 @@
 
 #define OUT_FRAME_PX_FMT AV_PIX_FMT_BGRA
 
-typedef struct {
-	atomic_bool			stop;
+struct us_drmstream_s;
 
-	us_frame_s *		frame;
-	us_memsink_s *		sink;
+typedef struct us_capturesink_runtime_s {
+	atomic_bool					stop;
 
-	const AVCodec*		codec;
-	AVCodecContext* 	codec_ctx;
+	us_frame_s *				frame;
+	us_memsink_s *				sink;
 
-	AVPacket*			packet_in;				// Packet holding the incoming data from the sink
-	AVFrame*			frame_in;				// Decoded frame from the packet
-	struct SwsContext* 	sws_ctx;				// SWS Context from pixel format correction
-	AVFrame*			frame_out_rgb_back;		// Pixel format correct output frame 1
-	AVFrame*			frame_out_rgb_front;	// Pixel format correct output frame 2
+	const AVCodec*				codec;
+	AVCodecContext* 			codec_ctx;
 
-	us_fpsi_s* 			fps;
+	AVPacket*					packet_in;				// Packet holding the incoming data from the sink
+	AVFrame*					frame_in;				// Decoded frame from the packet
+	struct SwsContext* 			sws_ctx;				// SWS Context from pixel format correction
+	AVFrame*					frame_out_rgb_back;		// Pixel format correct output frame 1
+	AVFrame*					frame_out_rgb_front;	// Pixel format correct output frame 2
 
-} us_capturesink_runtime_s;
+	us_fpsi_s* 					fps;
 
-typedef struct {
-	char*			sink_raw_name;
+	struct us_drmstream_s*		stream;
 
-	us_capturesink_runtime_s	*run;
-} us_capturesink_s;
+} us_capturesink_runtime_t;
+
+typedef struct us_capturesink_s {
+	char*						sink_raw_name;
+
+	us_capturesink_runtime_t	*run;
 
 
-us_capturesink_s *us_capturesink_init();
-void us_capturesink_destroy(us_capturesink_s *capturesink);
+} us_capturesink_t;
 
-void us_capturesink_loop(us_capturesink_s *capturesink);
-void us_capturesink_loop_break(us_capturesink_s *capturesink);
+
+us_capturesink_t *us_capturesink_init();
+void us_capturesink_destroy(us_capturesink_t *capturesink);
+
+void us_capturesink_loop(us_capturesink_t *capturesink);
+void us_capturesink_loop_break(us_capturesink_t *capturesink);

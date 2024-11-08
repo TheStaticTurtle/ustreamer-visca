@@ -2,12 +2,11 @@
 
 
 enum _US_OPT_VALUES {
-	_O_FB_DEVICE = 'f',
+	_O_SINK_PATH = 'i',
 
-	_O_RAW_SINK = 'i',
-
-	//_O_BUFFERS = 'b',
-
+	_O_DRM_CARD = 'd',
+	_O_DRM_RESOLUTION = 'r',
+	_O_DRM_FPS = 'f',
 
 	_O_HELP = 'h',
 	_O_VERSION = 'v',
@@ -28,10 +27,12 @@ enum _US_OPT_VALUES {
 };
 
 static const struct option _LONG_OPTS[] = {
-	{"fb-device",				required_argument,	NULL,	_O_FB_DEVICE},
-	{"raw-sink",				required_argument,	NULL,	_O_RAW_SINK},
+	{"sink",					required_argument,	NULL,	_O_SINK_PATH},
+
+	{"drm-device",			required_argument,	NULL,	_O_DRM_CARD},
+	{"drm-resolution",		required_argument,	NULL,	_O_DRM_RESOLUTION},
+	{"drm-rate",				required_argument,	NULL,	_O_DRM_FPS},
 	
-	//{"buffers",					required_argument,	NULL,	_O_BUFFERS},
 
 	{"adev-in",				required_argument,	NULL,	_O_AUDIO_DEV_IN},
 	{"adev-out",				required_argument,	NULL,	_O_AUDIO_DEV_OUT},
@@ -51,8 +52,9 @@ static const struct option _LONG_OPTS[] = {
 	{NULL, 0, NULL, 0},
 };
 
+static int _parse_resolution(const char *str, unsigned *width, unsigned *height, bool limited);
 
-static void _help(FILE *fp, const us_drmstream_s *drmstream, const us_audstream_s* audstream);
+static void _help(FILE *fp, const us_drmstream_t *drmstream, const us_audstream_s* audstream);
 
 
 us_options_s *us_options_init(unsigned argc, char *argv[]) {
@@ -78,7 +80,7 @@ void us_options_destroy(us_options_s *options) {
 }
 
 
-int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream_s* audstream) {
+int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream_s* audstream) {
 #	define OPT_SET(x_dest, x_value) { \
 			x_dest = x_value; \
 			break; \
@@ -118,6 +120,23 @@ int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream
 			break; \
 		}
 
+#	define OPT_RESOLUTION(x_name, x_dest_width, x_dest_height, x_limited) { \
+			switch (_parse_resolution(optarg, &x_dest_width, &x_dest_height, x_limited)) { \
+				case -1: \
+					printf("Invalid resolution format for '%s=%s'\n", x_name, optarg); \
+					return -1; \
+				case -2: \
+					printf("Invalid width of '%s=%s': min=%u, max=%u\n", x_name, optarg, US_VIDEO_MIN_WIDTH, US_VIDEO_MAX_WIDTH); \
+					return -1; \
+				case -3: \
+					printf("Invalid height of '%s=%s': min=%u, max=%u\n", x_name, optarg, US_VIDEO_MIN_HEIGHT, US_VIDEO_MAX_HEIGHT); \
+					return -1; \
+				case 0: break; \
+				default: assert(0 && "Unknown error"); \
+			} \
+			break; \
+		}
+
 #	define OPT_CTL_AUTO(x_dest) { \
 			if (!strcasecmp(optarg, "default")) { \
 				OPT_CTL_DEFAULT_NOBREAK(x_dest); \
@@ -135,9 +154,12 @@ int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream
 
 	for (int ch; (ch = getopt_long(options->argc, options->argv_copy, short_opts, _LONG_OPTS, NULL)) >= 0;) {
 		switch (ch) {
-			case _O_FB_DEVICE:			OPT_SET(drmstream->framebuffer_path, optarg);
 
-			case _O_RAW_SINK:			OPT_SET(drmstream->sink_raw_name, optarg);
+			case _O_SINK_PATH:			OPT_SET(drmstream->sink_raw_name, optarg);
+
+			case _O_DRM_CARD:			OPT_SET(drmstream->run->drm->card_path, optarg);
+			case _O_DRM_RESOLUTION:		OPT_RESOLUTION("--drm-resolution", drmstream->run->drm->requested_width, drmstream->run->drm->requested_height, true);
+			case _O_DRM_FPS:			OPT_NUMBER("--drm-rate", drmstream->run->drm->requested_rate, 0, 60000, 0);
 
 			case _O_AUDIO_DEV_IN:		OPT_SET(audstream->dev_in_name, optarg);
 			case _O_AUDIO_DEV_OUT:		OPT_SET(audstream->dev_out_name, optarg);
@@ -164,23 +186,28 @@ int options_parse(us_options_s *options, us_drmstream_s *drmstream, us_audstream
 #	undef OPT_CTL_AUTO
 #	undef OPT_CTL_MANUAL
 #	undef OPT_CTL_DEFAULT_NOBREAK
+#	undef OPT_RESOLUTION
 #	undef OPT_PARSE
 #	undef OPT_NUMBER
 #	undef OPT_SET
 	return 0;
 }
 
-static void _help(FILE *fp, const us_drmstream_s *drmstream, const us_audstream_s* audstream) {
+static void _help(FILE *fp, const us_drmstream_t *drmstream, const us_audstream_s* audstream) {
 #	define SAY(x_msg, ...) fprintf(fp, x_msg "\n", ##__VA_ARGS__)
 	SAY("\nuStreamer-FBcpy - uStreamer raw sink adapter to write to the framebuffer");
 	SAY("═══════════════════════════════════════════════════");
 	SAY("Version: %s; license: GPLv3", US_VERSION);
-	SAY("Capturing options:");
+	SAY("Capture options:");
 	SAY("══════════════════");
-	SAY("    -f|--fb-device </dev/path>  ────────── Path to Framebuffer device. Default: %s.\n", drmstream->framebuffer_path);
-	SAY("    -i|--raw-sink </dev/path> ──────────── Name of the raw sink from uStreamer. Default: %s.\n", drmstream->sink_raw_name);
-	
-	//SAY("    -b|--buffers <N>  ──────────────────── The number of buffers to receive data from the device.");
+	SAY("    -i|--sink </dev/path> ──────────────── Name of the raw sink from uStreamer. Default: %s.\n", drmstream->sink_raw_name);
+
+	SAY("Streaming options:");
+	SAY("══════════════════");
+	SAY("    -d|--drm-device </dev/path>  ───────── Path to darm card. Default: %s.\n", drmstream->run->drm->card_path);
+	SAY("    -r|--drm-resolution <WxH>  ─────────── Resolution to use. Default: %dx%d.\n", drmstream->run->drm->requested_width, drmstream->run->drm->requested_height);
+	SAY("    -f|--drm-rate mHz  ─────────────────── Refresh rate to use. Default: %d.\n", drmstream->run->drm->requested_rate);
+
 
 	SAY("Audio options:");
 	SAY("══════════════════");
@@ -206,4 +233,23 @@ static void _help(FILE *fp, const us_drmstream_s *drmstream, const us_audstream_
 	SAY("    -h|--help  ─────── Print this text and exit.\n");
 	SAY("    -v|--version  ──── Print version and exit.\n");
 #	undef SAY
+}
+
+static int _parse_resolution(const char *str, unsigned *width, unsigned *height, bool limited) {
+	unsigned tmp_width;
+	unsigned tmp_height;
+	if (sscanf(str, "%ux%u", &tmp_width, &tmp_height) != 2) {
+		return -1;
+	}
+	if (limited) {
+		if (tmp_width < US_VIDEO_MIN_WIDTH || tmp_width > US_VIDEO_MAX_WIDTH) {
+			return -2;
+		}
+		if (tmp_height < US_VIDEO_MIN_HEIGHT || tmp_height > US_VIDEO_MAX_HEIGHT) {
+			return -3;
+		}
+	}
+	*width = tmp_width;
+	*height = tmp_height;
+	return 0;
 }

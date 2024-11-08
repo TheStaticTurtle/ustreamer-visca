@@ -82,6 +82,46 @@ static uint32_t drm_find_crtc(us_drm_state_s* state, drmModeRes *res, drmModeCon
 
 	return 0;
 }
+
+static void drm_print_modes(drmModeConnector* connector) {
+	_LOG_DEBUG("Connector has %d modes:", connector->count_modes);
+	for(int i = 0; i < connector->count_modes; i++) {
+		_LOG_DEBUG(
+			"  - %dx%d%s %dmHz", 
+			connector->modes[i].hdisplay, 
+			connector->modes[i].hdisplay, 
+			(connector->modes[i].flags & DRM_MODE_FLAG_INTERLACE) ? "i" : "",
+			drm_mode_refresh_rate(&connector->modes[i])
+		);
+	}
+}
+static drmModeModeInfo* drm_find_best_mode(drmModeConnector* connector, int req_width, int req_height, int req_rate, bool req_interlaced) {
+	drmModeModeInfo* best_mode = NULL;
+
+	for(int i = 0; i < connector->count_modes; i++) {
+		bool interlaced = (connector->modes[i].flags & DRM_MODE_FLAG_INTERLACE) > 0;
+		if(connector->modes[i].hdisplay == req_width && connector->modes[i].vdisplay == req_height && interlaced == req_interlaced) {
+			best_mode = &connector->modes[i];
+
+			if(drm_mode_refresh_rate(best_mode) == req_rate) {
+				_LOG_INFO("Found exact mode match (%dx%d%s@%d)", connector->modes[i].hdisplay, connector->modes[i].vdisplay, interlaced?"i":"", req_rate)
+				return best_mode;
+			}
+		}
+	}
+	if(best_mode == NULL) {
+		best_mode = &connector->modes[0];
+		bool interlaced = (best_mode->flags & DRM_MODE_FLAG_INTERLACE) > 0;
+		_LOG_WARN("Didn't find a match for mode, using %dx%d%s@%d", best_mode->hdisplay, best_mode->vdisplay, interlaced?"i":"", drm_mode_refresh_rate(best_mode))
+	}
+	else {
+		bool interlaced = (best_mode->flags & DRM_MODE_FLAG_INTERLACE) > 0;
+		_LOG_WARN("Found inexact mode match (%dx%d%s@%d)", best_mode->hdisplay, best_mode->vdisplay, interlaced?"i":"", drm_mode_refresh_rate(best_mode))
+	}
+
+	return best_mode;
+}
+
 static bool drm_find_connector(us_drm_state_s* state, drmModeRes* res, drmModeConnector** connector, drmModeModeInfo** mode_ptr, uint32_t* crtc_id) {
 	uint32_t taken_crtcs = 0;
 
@@ -90,7 +130,7 @@ static bool drm_find_connector(us_drm_state_s* state, drmModeRes* res, drmModeCo
 		if (!connector) { continue; }
 		
 		if((*connector)->connection != DRM_MODE_CONNECTED) {
-			_LOG_WARN("Found display (%s) but it's disconencted", drm_conn_str((*connector)->connector_type))
+			_LOG_WARN("Found display (%s) but it's disconnected", drm_conn_str((*connector)->connector_type))
 			goto cleanup;
 		}
 
@@ -105,11 +145,14 @@ static bool drm_find_connector(us_drm_state_s* state, drmModeRes* res, drmModeCo
 			goto cleanup;
 		}
 
+		drm_print_modes(*connector);
+
 		_LOG_INFO("Using display %s and with CRTC %"PRIu32"", drm_conn_str((*connector)->connector_type), *crtc_id)
 
-		*mode_ptr = &(*connector)->modes[7];
+		*mode_ptr = drm_find_best_mode(*connector, state->requested_width, state->requested_height, state->requested_rate, false);
 
-		_LOG_INFO("Using mode %"PRIu32"x%"PRIu32"@%"PRIu32"", (*mode_ptr)->hdisplay, (*mode_ptr)->vdisplay, drm_mode_refresh_rate(*mode_ptr));
+		bool interlaced = ((*mode_ptr)->flags & DRM_MODE_FLAG_INTERLACE) > 0;
+		_LOG_INFO("Using mode %"PRIu32"x%"PRIu32"@%"PRIu32" %s", (*mode_ptr)->hdisplay, (*mode_ptr)->vdisplay, drm_mode_refresh_rate(*mode_ptr), interlaced?"(interlaced)":"");
 
 		return true;
 
@@ -187,12 +230,16 @@ static void drm_destroy_fb(int drm_fd, struct dumb_framebuffer *fb) {
 
 
 
-us_drm_state_s* drm_init(char* card) {
+us_drm_state_s* drm_init() {
 
 	us_drm_state_s *state;
 	US_CALLOC(state, 1);
 
-    state->fd = open(card, O_RDWR | O_NONBLOCK);
+	state->card_path = "/dev/dri/card1";
+
+	state->requested_width = 1920;
+	state->requested_height = 1080;
+	state->requested_rate = 30000;
 
 	return state;
 }
@@ -223,6 +270,8 @@ void drm_do_pageflip(us_drm_state_s* state, void* userdata) {
 
 
 void drm_setup(us_drm_state_s* state) {
+
+    state->fd = open(state->card_path, O_RDWR | O_NONBLOCK);
 
 	drmModeRes *res = drmModeGetResources(state->fd);
 	if(!res) {
@@ -272,4 +321,6 @@ void drm_setup(us_drm_state_s* state) {
 
 	drmModeFreeConnector(connector);
 	drmModeFreeResources(res);
+
+	_LOG_INFO("Initialized");
 }

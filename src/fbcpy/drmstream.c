@@ -25,6 +25,7 @@
 #include "../libs/memsink.h"
 #include "drm.h"
 
+#include "capturesink.h"
 
 #define _LOG_ERROR(x_msg, ...)		US_LOG_ERROR("DRMSTREAM: " x_msg, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)		US_LOG_PERROR("DRMSTREAM: " x_msg, ##__VA_ARGS__)
@@ -35,25 +36,24 @@
 #define _LOG_TRACE(x_msg, ...)		US_LOG_TRACE("DRMSTREAM: " x_msg, ##__VA_ARGS__)
 
 
-us_drmstream_s *us_drmstream_init(us_capturesink_s* capture) {
+us_drmstream_t *us_drmstream_init() {
 
-	us_drm_state_s* drm = drm_init("/dev/dri/card1");
+	us_drm_state_s* drm = drm_init();
 
-	us_drmstream_runtime_s *run;
+	us_drmstream_runtime_t *run;
 	US_CALLOC(run, 1);
 	atomic_init(&run->stop, false);
 	run->drm = drm;
 	run->fps = us_fpsi_init("drmstream", false);
-	run->capture = capture;
 
-	us_drmstream_s *drmstream;
+	us_drmstream_t *drmstream;
 	US_CALLOC(drmstream, 1);
 	drmstream->run = run;
 
 	return drmstream;
 }
 
-void us_drmstream_destroy(us_drmstream_s *drmstream) {
+void us_drmstream_destroy(us_drmstream_t *drmstream) {
 	us_fpsi_destroy(drmstream->run->fps);
 
 	drm_destroy(drmstream->run->drm);
@@ -70,7 +70,7 @@ static void page_flip_handler(int drm_fd, unsigned sequence, unsigned tv_sec, un
 	(void)tv_sec;
 	(void)tv_usec;
 
-	us_drmstream_s *drmstream = data;
+	us_drmstream_t *drmstream = data;
 	us_drm_state_s* state = drmstream->run->drm;
 	us_fpsi_s* fpsi = drmstream->run->fps;
 
@@ -109,14 +109,17 @@ bypass_frame_copy:
 
 
 
-void us_drmstream_loop(us_drmstream_s *drmstream) {
-	us_drmstream_runtime_s *const run = drmstream->run;
-
-	_LOG_INFO("Hello start");
-
-
+void us_drmstream_loop(us_drmstream_t *drmstream) {
+	us_drmstream_runtime_t *const run = drmstream->run;
 
 	drm_setup(run->drm);
+
+	_LOG_INFO("Waiting for capture start");
+	while(run->capture->run->frame_out_rgb_back == NULL && !atomic_load(&run->stop)) {
+		usleep(250000);
+	}
+	if (atomic_load(&run->stop)) { goto exit_early; }
+
 	drm_do_pageflip(run->drm, drmstream);
 
 
@@ -147,20 +150,15 @@ void us_drmstream_loop(us_drmstream_s *drmstream) {
 
 	}
 
-
-
-
-
-
-
-	_LOG_INFO("Hello end");
+exit_early:
+	_LOG_INFO("Finished");
 
 	if (!atomic_load(&run->stop)) {
 		US_SEP_INFO('=');
 	}
 }
 
-void us_drmstream_loop_break(us_drmstream_s *stream) {
+void us_drmstream_loop_break(us_drmstream_t *stream) {
 	atomic_store(&stream->run->stop, true);
 }
 

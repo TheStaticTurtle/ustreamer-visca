@@ -1,3 +1,4 @@
+#include <libavutil/log.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -13,9 +14,10 @@
 #include "drmstream.h"
 #include "capturesink.h"
 #include "audstream.h"
+#include "utils.h"
 
-static us_drmstream_s	*_g_drmstream = NULL;
-static us_capturesink_s	*_g_capturesink = NULL;
+static us_drmstream_t	*_g_drmstream = NULL;
+static us_capturesink_t	*_g_capturesink = NULL;
 static us_audstream_s	*_g_audstream = NULL;
 
 
@@ -65,10 +67,18 @@ int main(int argc, char *argv[]) {
 	US_LOGGING_INIT;
 	US_THREAD_RENAME("main");
 
+    av_log_set_level(AV_LOG_INFO);
+	us_set_libav_log_callback();
+	
 	us_options_s *options = us_options_init(argc, argv);
 	
 	_g_capturesink = us_capturesink_init();
-	_g_drmstream = us_drmstream_init(_g_capturesink);
+	_g_drmstream = us_drmstream_init();
+
+	_g_capturesink->run->stream = _g_drmstream;
+	_g_drmstream->run->capture = _g_capturesink;
+
+
 	_g_audstream = us_audstream_init();
 
 	if ((exit_code = options_parse(options, _g_drmstream, _g_audstream)) == 0) {
