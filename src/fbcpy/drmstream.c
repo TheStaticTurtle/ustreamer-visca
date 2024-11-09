@@ -2,6 +2,7 @@
 
 #include <libavcodec/codec_id.h>
 #include <libavutil/frame.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdatomic.h>
@@ -12,6 +13,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <string.h>
 #include <pthread.h>
 
 #include "../libs/types.h"
@@ -46,15 +48,21 @@ us_drmstream_t *us_drmstream_init() {
 	run->drm = drm;
 	run->fps = us_fpsi_init("drmstream", false);
 
+	run->ft = us_frametext_init();
+
+
 	us_drmstream_t *drmstream;
 	US_CALLOC(drmstream, 1);
 	drmstream->run = run;
+	drmstream->ring_capacity = 6;
 
 	return drmstream;
 }
 
 void us_drmstream_destroy(us_drmstream_t *drmstream) {
 	us_fpsi_destroy(drmstream->run->fps);
+
+	US_RING_DELETE_WITH_ITEMS(drmstream->run->frame_ring, free);
 
 	drm_destroy(drmstream->run->drm);
 
@@ -63,7 +71,17 @@ void us_drmstream_destroy(us_drmstream_t *drmstream) {
 }
 
 
-
+// See: https://stackoverflow.com/questions/7069090/convert-rgb-to-rgba-in-c
+void fast_unpack(unsigned char* rgba, const unsigned char* rgb, const int count) {
+    if(count==0)
+        return;
+    for(int i=count; --i; rgba+=4, rgb+=3) {
+        *(uint32_t*)(void*)rgba = *(const uint32_t*)(const void*)rgb;
+    }
+    for(int j=0; j<3; ++j) {
+        rgba[j] = rgb[j];
+    }
+}
 
 static void page_flip_handler(int drm_fd, unsigned sequence, unsigned tv_sec, unsigned tv_usec, void *data) {
 	(void)sequence;
@@ -71,55 +89,70 @@ static void page_flip_handler(int drm_fd, unsigned sequence, unsigned tv_sec, un
 	(void)tv_usec;
 
 	us_drmstream_t *drmstream = data;
-	us_drm_state_s* state = drmstream->run->drm;
-	us_fpsi_s* fpsi = drmstream->run->fps;
+	us_drmstream_runtime_t* run = drmstream->run;
+	us_drm_state_s* state = run->drm;
 
-	us_fpsi_update(fpsi, true, NULL);
+	// Try to get a frame from the ringbuffer for 1sec
+	int idx = us_ring_consumer_acquire(run->frame_ring, 1);
+	if(idx == -1) {
+		// If 1sec elapsed, consider that something got disconencted
+		_LOG_WARN("Ring buffer underun - Is the sink connected ?")
 
-	// Get the backbuffer
-	struct dumb_framebuffer *fb = state->back;
+		// Unpach the RGB24 error message to both framebuffers (don't care about glitches)
+		fast_unpack(state->front->data, run->ft->frame->data, state->back->width * state->back->height);
+		fast_unpack(state->back->data, run->ft->frame->data, state->back->width * state->back->height);
 
-	// Get the input frame
-	AVFrame* frame = drmstream->run->capture->run->frame_out_rgb_front;
+	} else {
+		// Got a frame in less than 1sec, copy it to the backbuffer
+		memcpy(state->back->data, run->frame_ring->items[idx], state->back->size);
+		// Release the frame
+		us_ring_consumer_release(run->frame_ring, idx);
 
-	// Make sure the input frame is valid 
-	if(!frame) {
-		_LOG_ERROR("Frame from capture is null")
-		goto bypass_frame_copy;
+		//Update the FPS counter
+		us_fpsi_update(run->fps, true, NULL);
 	}
 
-	// Make sure the input frame matches framebuffer 
-	if(frame->width != fb->width || frame->height != fb->height || frame->linesize[0] != fb->stride) {
-		_LOG_ERROR("Frame from capture does not match framebuffer output in=[w=%d h=%d s=%d] out=[w=%d h=%d s=%d]", frame->width, frame->height, frame->linesize[0], fb->width, fb->height, fb->stride)
-		goto bypass_frame_copy;
-	}
-
-	// Copy the frame data to the backbuffer
-	memcpy(fb->data, frame->data[0], fb->height * fb->stride);
-
-bypass_frame_copy:
 	// Continue pageflips
 	drm_do_pageflip(state, drmstream);
 
-	// Comment these two lines out to remove double buffering
+	// Swap the buffers
+	dumb_framebuffer_t* tmp = state->back;
 	state->back = state->front;
-	state->front = fb;
+	state->front = tmp;
 }
 
 
+bool us_drmstream_produce_buffer(us_drmstream_t *drmstream, unsigned char* rgba_data, size_t len) {
+	us_drmstream_runtime_t *const run = drmstream->run;
+	
+	int idx = us_ring_producer_acquire(run->frame_ring, 1);
+	if(idx == -1) {
+		_LOG_WARN("Couldn't write frame, is drm too slow?")
+		return false;
+	}
+
+	memcpy(run->frame_ring->items[idx], rgba_data, US_MIN(len, run->drm->back->size));
+
+	us_ring_producer_release(run->frame_ring, idx);
+
+	return true;
+}
 
 
 void us_drmstream_loop(us_drmstream_t *drmstream) {
 	us_drmstream_runtime_t *const run = drmstream->run;
 
 	drm_setup(run->drm);
+	
+	us_frametext_draw(run->ft, "< NO SIGNAL >", 1920, 1080);
 
-	_LOG_INFO("Waiting for capture start");
-	while(run->capture->run->frame_out_rgb_back == NULL && !atomic_load(&run->stop)) {
-		usleep(250000);
+	run->frame_ring = us_ring_init(drmstream->ring_capacity);
+
+	for (size_t m_index = 0; m_index < run->frame_ring->capacity; ++m_index) {
+		run->frame_ring->items[m_index] = malloc(run->drm->front->size);
+		us_ring_producer_release(run->frame_ring, us_ring_producer_acquire(run->frame_ring, 0));
 	}
-	if (atomic_load(&run->stop)) { goto exit_early; }
-
+	
 	drm_do_pageflip(run->drm, drmstream);
 
 
@@ -149,8 +182,7 @@ void us_drmstream_loop(us_drmstream_t *drmstream) {
 		}
 
 	}
-
-exit_early:
+	
 	_LOG_INFO("Finished");
 
 	if (!atomic_load(&run->stop)) {

@@ -7,6 +7,7 @@ enum _US_OPT_VALUES {
 	_O_DRM_CARD = 'd',
 	_O_DRM_RESOLUTION = 'r',
 	_O_DRM_FPS = 'f',
+	_O_DRM_RING_CAP = 'b',
 
 	_O_HELP = 'h',
 	_O_VERSION = 'v',
@@ -29,25 +30,25 @@ enum _US_OPT_VALUES {
 static const struct option _LONG_OPTS[] = {
 	{"sink",					required_argument,	NULL,	_O_SINK_PATH},
 
-	{"drm-device",			required_argument,	NULL,	_O_DRM_CARD},
-	{"drm-resolution",		required_argument,	NULL,	_O_DRM_RESOLUTION},
-	{"drm-rate",				required_argument,	NULL,	_O_DRM_FPS},
+	{"drm-device",				required_argument,	NULL,	_O_DRM_CARD},
+	{"drm-resolution",			required_argument,	NULL,	_O_DRM_RESOLUTION},
+	{"drm-rate",					required_argument,	NULL,	_O_DRM_FPS},
+	{"drm-ring-capacity",			required_argument,	NULL,	_O_DRM_RING_CAP},
 	
-
-	{"adev-in",				required_argument,	NULL,	_O_AUDIO_DEV_IN},
-	{"adev-out",				required_argument,	NULL,	_O_AUDIO_DEV_OUT},
-	{"abuffers",				required_argument,	NULL,	_O_AUDIO_BUFFERS},
+	{"adev-in",					required_argument,	NULL,	_O_AUDIO_DEV_IN},
+	{"adev-out",					required_argument,	NULL,	_O_AUDIO_DEV_OUT},
+	{"abuffers",					required_argument, NULL,	_O_AUDIO_BUFFERS},
 
 	{"log-level",				required_argument,	NULL,	_O_LOG_LEVEL},
 	{"perf",					no_argument,		NULL,	_O_PERF},
-	{"verbose",				no_argument,		NULL,	_O_VERBOSE},
+	{"verbose",					no_argument,		NULL,	_O_VERBOSE},
 	{"debug",					no_argument,		NULL,	_O_DEBUG},
 	{"trace",					no_argument,		NULL,	_O_TRACE},
 	{"force-log-colors",		no_argument,		NULL,	_O_FORCE_LOG_COLORS},
-	{"no-log-colors",		no_argument,		NULL,	_O_NO_LOG_COLORS},
+	{"no-log-colors",			no_argument,		NULL,	_O_NO_LOG_COLORS},
 
 	{"help",					no_argument,		NULL,	_O_HELP},
-	{"version",				no_argument,		NULL,	_O_VERSION},
+	{"version",					no_argument,		NULL,	_O_VERSION},
 
 	{NULL, 0, NULL, 0},
 };
@@ -160,6 +161,7 @@ int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream
 			case _O_DRM_CARD:			OPT_SET(drmstream->run->drm->card_path, optarg);
 			case _O_DRM_RESOLUTION:		OPT_RESOLUTION("--drm-resolution", drmstream->run->drm->requested_width, drmstream->run->drm->requested_height, true);
 			case _O_DRM_FPS:			OPT_NUMBER("--drm-rate", drmstream->run->drm->requested_rate, 0, 60000, 0);
+			case _O_DRM_RING_CAP:		OPT_NUMBER("--drm-ring-capacity", drmstream->ring_capacity, 1, 120, 0);
 
 			case _O_AUDIO_DEV_IN:		OPT_SET(audstream->dev_in_name, optarg);
 			case _O_AUDIO_DEV_OUT:		OPT_SET(audstream->dev_out_name, optarg);
@@ -207,7 +209,7 @@ static void _help(FILE *fp, const us_drmstream_t *drmstream, const us_audstream_
 	SAY("    -d|--drm-device </dev/path>  ───────── Path to darm card. Default: %s.\n", drmstream->run->drm->card_path);
 	SAY("    -r|--drm-resolution <WxH>  ─────────── Resolution to use. Default: %dx%d.\n", drmstream->run->drm->requested_width, drmstream->run->drm->requested_height);
 	SAY("    -f|--drm-rate mHz  ─────────────────── Refresh rate to use. Default: %d.\n", drmstream->run->drm->requested_rate);
-
+	SAY("    -b|--drm-ring-capacity N  ──────────── Frame ringbuffer capacity. Default: %d.\n", drmstream->ring_capacity);
 
 	SAY("Audio options:");
 	SAY("══════════════════");

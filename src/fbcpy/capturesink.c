@@ -281,20 +281,19 @@ void us_capturesink_loop(us_capturesink_t *capturesink) {
 			}
 
 			// Correct the pixel format
-			sws_scale(
-				run->sws_ctx, 
-				(const uint8_t **)run->frame_in->data, 
-				run->frame_in->linesize, 
-				0, 
-				run->frame_in->height, 
-				run->frame_out_rgb_back->data, 
-				run->frame_out_rgb_back->linesize
-			);
+			if(sws_scale_frame(run->sws_ctx, run->frame_out_rgb_back, run->frame_in) < 0) {
+				_LOG_ERROR("Couldn't rescale frame")
+				continue;
+			}
 
-			// Swap the buffers
-			AVFrame* tmp = run->frame_out_rgb_front;
-			run->frame_out_rgb_front = run->frame_out_rgb_back;
-			run->frame_out_rgb_back = tmp;
+			dumb_framebuffer_t* drm_back_buffer = run->stream->run->drm->back;
+
+			if(run->frame_out_rgb_back->width != drm_back_buffer->width || run->frame_out_rgb_back->height != drm_back_buffer->height || run->frame_out_rgb_back->linesize[0] != drm_back_buffer->stride) {
+				_LOG_ERROR("Frame from capture does not match framebuffer output in=[w=%d h=%d s=%d] out=[w=%d h=%d s=%d]", run->frame_out_rgb_back->width, run->frame_out_rgb_back->height, run->frame_out_rgb_back->linesize[0], drm_back_buffer->width, drm_back_buffer->height, drm_back_buffer->stride)
+				continue;
+			}
+			
+			us_drmstream_produce_buffer(run->stream, run->frame_out_rgb_back->data[0], run->frame_out_rgb_back->linesize[0] * run->frame_out_rgb_back->height);
 
 			_LOG_TRACE(
 				"Got frame %c n=%d pts=%" PRId64 " dts=%" PRId64 " is_key=%d latency=%.3Lf",

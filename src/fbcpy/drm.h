@@ -4,7 +4,7 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
-struct dumb_framebuffer {
+typedef struct dumb_framebuffer_s {
 	uint32_t id;     // DRM object ID
 	uint32_t width;
 	uint32_t height;
@@ -13,7 +13,7 @@ struct dumb_framebuffer {
 	uint64_t size;   // size of mapping
 
 	uint8_t *data;   // mmapped data we can write to
-};
+} dumb_framebuffer_t;
 
 
 typedef struct {
@@ -28,9 +28,9 @@ typedef struct {
 	uint32_t crtc_id;
 	drmModeCrtc* old_crtc;
 
-	struct dumb_framebuffer fb[2];
-	struct dumb_framebuffer *front;
-	struct dumb_framebuffer *back;
+	struct dumb_framebuffer_s fb[2];
+	struct dumb_framebuffer_s *front;
+	struct dumb_framebuffer_s *back;
 	
 } us_drm_state_s;
 

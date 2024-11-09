@@ -164,7 +164,7 @@ static bool drm_find_connector(us_drm_state_s* state, drmModeRes* res, drmModeCo
 }
 
 
-static bool drm_create_fb(int drm_fd, uint32_t width, uint32_t height, struct dumb_framebuffer *fb) {
+static bool drm_create_fb(int drm_fd, uint32_t width, uint32_t height, struct dumb_framebuffer_s *fb) {
 	int ret;
 
 	struct drm_mode_create_dumb create = {
@@ -221,7 +221,7 @@ error_dumb:
 	drmIoctl(drm_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
 	return false;
 }
-static void drm_destroy_fb(int drm_fd, struct dumb_framebuffer *fb) {
+static void drm_destroy_fb(int drm_fd, struct dumb_framebuffer_s *fb) {
 	munmap(fb->data, fb->size);
 	drmModeRmFB(drm_fd, fb->id);
 	struct drm_mode_destroy_dumb destroy = { .handle = fb->handle };
