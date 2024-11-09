@@ -13,7 +13,7 @@ _DUMP = ustreamer-dump.bin
 _FBCPY = ustreamer-fpcpy.bin
 _V4P = ustreamer-v4p.bin
 
-_CFLAGS = -MD -c -std=c17 -Wall -Wextra -D_GNU_SOURCE $(CFLAGS)
+_CFLAGS = -MD -c -std=c17 -Wall -Wextra -g -D_GNU_SOURCE $(CFLAGS)
 
 _USTR_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic -levent -levent_pthreads
 _DUMP_LDFLAGS = $(LDFLAGS) -lm -ljpeg -pthread -lrt -latomic

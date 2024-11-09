@@ -181,8 +181,8 @@ bool us_capturesink_init_outputs_from_av_frame(us_capturesink_t *capturesink, AV
 		return true;
 	}
 
-	int dst_width = capturesink->run->stream->run->drm->fb[0].width;
-	int dst_height = capturesink->run->stream->run->drm->fb[0].height;
+	int dst_width = capturesink->run->stream->run->front->width;
+	int dst_height = capturesink->run->stream->run->front->height;
 
 	run->sws_ctx = sws_getContext(
 		frame->width,
@@ -240,7 +240,7 @@ void us_capturesink_loop(us_capturesink_t *capturesink) {
 	us_capturesink_runtime_t *const run = capturesink->run;
 
 	_LOG_INFO("Waiting for DRM initialize");
-	while(capturesink->run->stream->run->drm->fb[0].data == NULL) {
+	while(capturesink->run->stream->run->front->data == NULL) {
 		usleep(250000);
 	}
 	if (atomic_load(&run->stop)) { goto exit_early; }
@@ -286,10 +286,8 @@ void us_capturesink_loop(us_capturesink_t *capturesink) {
 				continue;
 			}
 
-			dumb_framebuffer_t* drm_back_buffer = run->stream->run->drm->back;
-
-			if(run->frame_out_rgb_back->width != drm_back_buffer->width || run->frame_out_rgb_back->height != drm_back_buffer->height || run->frame_out_rgb_back->linesize[0] != drm_back_buffer->stride) {
-				_LOG_ERROR("Frame from capture does not match framebuffer output in=[w=%d h=%d s=%d] out=[w=%d h=%d s=%d]", run->frame_out_rgb_back->width, run->frame_out_rgb_back->height, run->frame_out_rgb_back->linesize[0], drm_back_buffer->width, drm_back_buffer->height, drm_back_buffer->stride)
+			if(run->frame_out_rgb_back->width != run->stream->run->back->width || run->frame_out_rgb_back->height != run->stream->run->back->height || run->frame_out_rgb_back->linesize[0] != run->stream->run->back->stride) {
+				_LOG_ERROR("Frame from capture does not match framebuffer output in=[w=%d h=%d s=%d] out=[w=%d h=%d s=%d]", run->frame_out_rgb_back->width, run->frame_out_rgb_back->height, run->frame_out_rgb_back->linesize[0], run->stream->run->back->width, run->stream->run->back->height, run->stream->run->back->stride)
 				continue;
 			}
 			

@@ -51,3 +51,16 @@ static void libav_log_callback(void * avcl, int level, const char * fmt, va_list
 void us_set_libav_log_callback() {
     av_log_set_callback(libav_log_callback);
 }
+
+
+// See: https://stackoverflow.com/questions/7069090/convert-rgb-to-rgba-in-c
+void fast_unpack(unsigned char* rgba, const unsigned char* rgb, const int count) {
+    if(count==0)
+        return;
+    for(int i=count; --i; rgba+=4, rgb+=3) {
+        *(uint32_t*)(void*)rgba = *(const uint32_t*)(const void*)rgb;
+    }
+    for(int j=0; j<3; ++j) {
+        rgba[j] = rgb[j];
+    }
+}
