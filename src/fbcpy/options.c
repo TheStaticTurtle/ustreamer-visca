@@ -1,4 +1,5 @@
 #include "options.h"
+#include "capturesink.h"
 
 
 enum _US_OPT_VALUES {
@@ -7,7 +8,6 @@ enum _US_OPT_VALUES {
 	_O_DRM_CARD = 'd',
 	_O_DRM_RESOLUTION = 'r',
 	_O_DRM_FPS = 'f',
-	_O_DRM_RING_CAP = 'b',
 
 	_O_HELP = 'h',
 	_O_VERSION = 'v',
@@ -33,7 +33,6 @@ static const struct option _LONG_OPTS[] = {
 	{"drm-device",				required_argument,	NULL,	_O_DRM_CARD},
 	{"drm-resolution",			required_argument,	NULL,	_O_DRM_RESOLUTION},
 	{"drm-rate",					required_argument,	NULL,	_O_DRM_FPS},
-	{"drm-ring-capacity",			required_argument,	NULL,	_O_DRM_RING_CAP},
 	
 	{"adev-in",					required_argument,	NULL,	_O_AUDIO_DEV_IN},
 	{"adev-out",					required_argument,	NULL,	_O_AUDIO_DEV_OUT},
@@ -55,7 +54,7 @@ static const struct option _LONG_OPTS[] = {
 
 static int _parse_resolution(const char *str, unsigned *width, unsigned *height, bool limited);
 
-static void _help(FILE *fp, const us_drmstream_t *drmstream, const us_audstream_s* audstream);
+static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture, const us_audstream_s* audstream);
 
 
 us_options_s *us_options_init(unsigned argc, char *argv[]) {
@@ -81,7 +80,7 @@ void us_options_destroy(us_options_s *options) {
 }
 
 
-int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream_s* audstream) {
+int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *capture, us_audstream_s* audstream) {
 #	define OPT_SET(x_dest, x_value) { \
 			x_dest = x_value; \
 			break; \
@@ -156,12 +155,11 @@ int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream
 	for (int ch; (ch = getopt_long(options->argc, options->argv_copy, short_opts, _LONG_OPTS, NULL)) >= 0;) {
 		switch (ch) {
 
-			case _O_SINK_PATH:			OPT_SET(drmstream->sink_raw_name, optarg);
+			case _O_SINK_PATH:			OPT_SET(capture->sink_raw_name, optarg);
 
-			case _O_DRM_CARD:			OPT_SET(drmstream->card_path, optarg);
-			case _O_DRM_RESOLUTION:		OPT_RESOLUTION("--drm-resolution", drmstream->requested_width, drmstream->requested_height, true);
-			case _O_DRM_FPS:			OPT_NUMBER("--drm-rate", drmstream->requested_rate, 0, 60000, 0);
-			case _O_DRM_RING_CAP:		OPT_NUMBER("--drm-ring-capacity", drmstream->ring_capacity, 1, 120, 0);
+			case _O_DRM_CARD:			OPT_SET(drm->card_path, optarg);
+			case _O_DRM_RESOLUTION:		OPT_RESOLUTION("--drm-resolution", drm->requested_width, drm->requested_height, true);
+			case _O_DRM_FPS:			OPT_NUMBER("--drm-rate", drm->requested_rate, 0, 60000, 0);
 
 			case _O_AUDIO_DEV_IN:		OPT_SET(audstream->dev_in_name, optarg);
 			case _O_AUDIO_DEV_OUT:		OPT_SET(audstream->dev_out_name, optarg);
@@ -175,7 +173,7 @@ int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream
 			case _O_FORCE_LOG_COLORS:	OPT_SET(us_g_log_colored, true);
 			case _O_NO_LOG_COLORS:		OPT_SET(us_g_log_colored, false);
 
-			case _O_HELP:		_help(stdout, drmstream, audstream); return 1;
+			case _O_HELP:		_help(stdout, drm, capture, audstream); return 1;
 			case _O_VERSION:	puts(US_VERSION); return 1;
 
 			case 0:		break;
@@ -195,21 +193,20 @@ int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream
 	return 0;
 }
 
-static void _help(FILE *fp, const us_drmstream_t *drmstream, const us_audstream_s* audstream) {
+static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture, const us_audstream_s* audstream) {
 #	define SAY(x_msg, ...) fprintf(fp, x_msg "\n", ##__VA_ARGS__)
 	SAY("\nuStreamer-FBcpy - uStreamer raw sink adapter to write to the framebuffer");
 	SAY("═══════════════════════════════════════════════════");
 	SAY("Version: %s; license: GPLv3", US_VERSION);
 	SAY("Capture options:");
 	SAY("══════════════════");
-	SAY("    -i|--sink </dev/path> ──────────────── Name of the raw sink from uStreamer. Default: %s.\n", drmstream->sink_raw_name);
+	SAY("    -i|--sink </dev/path> ──────────────── Name of the raw sink from uStreamer. Default: %s.\n", capture->sink_raw_name);
 
 	SAY("Streaming options:");
 	SAY("══════════════════");
-	SAY("    -d|--drm-device </dev/path>  ───────── Path to darm card. Default: %s.\n", drmstream->card_path);
-	SAY("    -r|--drm-resolution <WxH>  ─────────── Resolution to use. Default: %dx%d.\n", drmstream->requested_width, drmstream->requested_height);
-	SAY("    -f|--drm-rate mHz  ─────────────────── Refresh rate to use. Default: %d.\n", drmstream->requested_rate);
-	SAY("    -b|--drm-ring-capacity N  ──────────── Frame ringbuffer capacity. Default: %d.\n", drmstream->ring_capacity);
+	SAY("    -d|--drm-device </dev/path>  ───────── Path to darm card. Default: %s.\n", drm->card_path);
+	SAY("    -r|--drm-resolution <WxH>  ─────────── Resolution to use. Default: %dx%d.\n", drm->requested_width, drm->requested_height);
+	SAY("    -f|--drm-rate mHz  ─────────────────── Refresh rate to use. Default: %d.\n", drm->requested_rate);
 
 	SAY("Audio options:");
 	SAY("══════════════════");

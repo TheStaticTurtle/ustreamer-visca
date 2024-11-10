@@ -31,7 +31,7 @@
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 
-#include "drmstream.h"
+#include "drm.h"
 
 #define _LOG_ERROR(x_msg, ...)		US_LOG_ERROR("CAPTURESINK: " x_msg, ##__VA_ARGS__)
 #define _LOG_PERROR(x_msg, ...)		US_LOG_PERROR("CAPTURESINK: " x_msg, ##__VA_ARGS__)
@@ -42,7 +42,7 @@
 #define _LOG_TRACE(x_msg, ...)		US_LOG_TRACE("CAPTURESINK: " x_msg, ##__VA_ARGS__)
 
 
-us_capturesink_t *us_capturesink_init() {
+us_capturesink_t *us_capturesink_init(us_drm_t* drm) {
 	us_capturesink_runtime_t *run;
 	US_CALLOC(run, 1);
 	atomic_init(&run->stop, false);
@@ -54,6 +54,8 @@ us_capturesink_t *us_capturesink_init() {
 
 	run->packet_in = av_packet_alloc();
 	run->frame_in = av_frame_alloc();
+
+	run->drm = drm;
 
 	us_capturesink_t *capturesink;
 	US_CALLOC(capturesink, 1);
@@ -170,8 +172,7 @@ cleanup:
 void us_capturesink_destroy_outputs(us_capturesink_t* capturesink) {
 	us_capturesink_runtime_t *const run = capturesink->run;
 
-	if(run->frame_out_rgb_back) { av_frame_free(&run->frame_out_rgb_back); }
-	if(run->frame_out_rgb_front) { av_frame_free(&run->frame_out_rgb_front); }
+	if(run->frame_out) { av_frame_free(&run->frame_out); }
 	if(run->sws_ctx) { US_DELETE(run->sws_ctx, sws_freeContext); }
 }
 bool us_capturesink_init_outputs_from_av_frame(us_capturesink_t *capturesink, AVFrame* frame) {
@@ -181,8 +182,8 @@ bool us_capturesink_init_outputs_from_av_frame(us_capturesink_t *capturesink, AV
 		return true;
 	}
 
-	int dst_width = capturesink->run->stream->run->front->width;
-	int dst_height = capturesink->run->stream->run->front->height;
+	int dst_width = capturesink->run->drm->run->buffers[0].width;
+	int dst_height = capturesink->run->drm->run->buffers[0].height;
 
 	run->sws_ctx = sws_getContext(
 		frame->width,
@@ -202,29 +203,16 @@ bool us_capturesink_init_outputs_from_av_frame(us_capturesink_t *capturesink, AV
 	}
 
 
-	run->frame_out_rgb_back = av_frame_alloc();
-	if (run->frame_out_rgb_back == NULL) {
+	run->frame_out = av_frame_alloc();
+	if (run->frame_out == NULL) {
 		_LOG_ERROR("Failed to allocate output frame 1");
 		goto cleanup;
 	}
-	run->frame_out_rgb_back->width = dst_width;
-	run->frame_out_rgb_back->height = dst_height;
-	run->frame_out_rgb_back->format = OUT_FRAME_PX_FMT;
-	if (av_image_alloc(run->frame_out_rgb_back->data, run->frame_out_rgb_back->linesize, dst_width, dst_height, OUT_FRAME_PX_FMT, 32) < 0) {
+	run->frame_out->width = dst_width;
+	run->frame_out->height = dst_height;
+	run->frame_out->format = OUT_FRAME_PX_FMT;
+	if (av_image_alloc(run->frame_out->data, run->frame_out->linesize, dst_width, dst_height, OUT_FRAME_PX_FMT, 32) < 0) {
 		_LOG_ERROR("Failed to allocate buffer for output frame 1");
-		goto cleanup;
-	}
-
-	run->frame_out_rgb_front = av_frame_alloc();
-	if (run->frame_out_rgb_front == NULL) {
-		_LOG_ERROR("Failed to allocate output frame 2");
-		goto cleanup;
-	}
-	run->frame_out_rgb_front->width = dst_width;
-	run->frame_out_rgb_front->height = dst_height;
-	run->frame_out_rgb_front->format = OUT_FRAME_PX_FMT;
-	if (av_image_alloc(run->frame_out_rgb_front->data, run->frame_out_rgb_front->linesize, dst_width, dst_height, OUT_FRAME_PX_FMT, 32) < 0) {
-		_LOG_ERROR("Failed to allocate buffer for output frame 2");
 		goto cleanup;
 	}
 
@@ -239,11 +227,7 @@ cleanup:
 void us_capturesink_loop(us_capturesink_t *capturesink) {
 	us_capturesink_runtime_t *const run = capturesink->run;
 
-	_LOG_INFO("Waiting for DRM initialize");
-	while(capturesink->run->stream->run->front->data == NULL) {
-		usleep(250000);
-	}
-	if (atomic_load(&run->stop)) { goto exit_early; }
+	us_drm_setup(capturesink->run->drm);
 
 
 	if ((run->sink = us_memsink_init_opened("input", capturesink->sink_raw_name, false, 0, false, 0, 2)) == NULL) {
@@ -281,17 +265,14 @@ void us_capturesink_loop(us_capturesink_t *capturesink) {
 			}
 
 			// Correct the pixel format
-			if(sws_scale_frame(run->sws_ctx, run->frame_out_rgb_back, run->frame_in) < 0) {
+			if(sws_scale_frame(run->sws_ctx, run->frame_out, run->frame_in) < 0) {
 				_LOG_ERROR("Couldn't rescale frame")
 				continue;
 			}
-
-			if(run->frame_out_rgb_back->width != run->stream->run->back->width || run->frame_out_rgb_back->height != run->stream->run->back->height || run->frame_out_rgb_back->linesize[0] != run->stream->run->back->stride) {
-				_LOG_ERROR("Frame from capture does not match framebuffer output in=[w=%d h=%d s=%d] out=[w=%d h=%d s=%d]", run->frame_out_rgb_back->width, run->frame_out_rgb_back->height, run->frame_out_rgb_back->linesize[0], run->stream->run->back->width, run->stream->run->back->height, run->stream->run->back->stride)
-				continue;
-			}
 			
-			us_drmstream_produce_buffer(run->stream, run->frame_out_rgb_back->data[0], run->frame_out_rgb_back->linesize[0] * run->frame_out_rgb_back->height);
+			if(us_drm_vsynced_buffer_write(run->drm, run->frame_out->data[0], run->frame_out->linesize[0] * run->frame_out->height) <0) {
+				_LOG_ERROR("Failed to write frame to DRM");
+			}
 
 			_LOG_TRACE(
 				"Got frame %c n=%d pts=%" PRId64 " dts=%" PRId64 " is_key=%d latency=%.3Lf",
@@ -318,7 +299,6 @@ void us_capturesink_loop(us_capturesink_t *capturesink) {
 	
 	US_DELETE(capturesink->run->sink, us_memsink_destroy);
 
-exit_early:
 	_LOG_INFO("Finished");
 
 	if (!atomic_load(&run->stop)) {

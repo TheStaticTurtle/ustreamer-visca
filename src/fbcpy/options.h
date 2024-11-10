@@ -19,7 +19,8 @@
 #include "../libs/options.h"
 
 
-#include "drmstream.h"
+#include "capturesink.h"
+#include "drm.h"
 #include "audstream.h"
 
 #define US_VIDEO_MIN_WIDTH		((uint)160)
@@ -39,4 +40,4 @@ typedef struct {
 us_options_s *us_options_init(unsigned argc, char *argv[]);
 void us_options_destroy(us_options_s *options);
 
-int options_parse(us_options_s *options, us_drmstream_t *drmstream, us_audstream_s *audstream);
+int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *capture, us_audstream_s* audstream);
