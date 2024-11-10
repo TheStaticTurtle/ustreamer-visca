@@ -14,10 +14,6 @@ enum _US_OPT_VALUES {
 
 	// Longs only
 
-	_O_AUDIO_DEV_IN = 10000,
-	_O_AUDIO_DEV_OUT,
-	_O_AUDIO_BUFFERS,
-
 	_O_LOG_LEVEL,
 	_O_PERF,
 	_O_VERBOSE,
@@ -33,10 +29,6 @@ static const struct option _LONG_OPTS[] = {
 	{"drm-device",				required_argument,	NULL,	_O_DRM_CARD},
 	{"drm-resolution",			required_argument,	NULL,	_O_DRM_RESOLUTION},
 	{"drm-rate",					required_argument,	NULL,	_O_DRM_FPS},
-	
-	{"adev-in",					required_argument,	NULL,	_O_AUDIO_DEV_IN},
-	{"adev-out",					required_argument,	NULL,	_O_AUDIO_DEV_OUT},
-	{"abuffers",					required_argument, NULL,	_O_AUDIO_BUFFERS},
 
 	{"log-level",				required_argument,	NULL,	_O_LOG_LEVEL},
 	{"perf",					no_argument,		NULL,	_O_PERF},
@@ -54,7 +46,7 @@ static const struct option _LONG_OPTS[] = {
 
 static int _parse_resolution(const char *str, unsigned *width, unsigned *height, bool limited);
 
-static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture, const us_audstream_s* audstream);
+static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture);
 
 
 us_options_s *us_options_init(unsigned argc, char *argv[]) {
@@ -80,7 +72,7 @@ void us_options_destroy(us_options_s *options) {
 }
 
 
-int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *capture, us_audstream_s* audstream) {
+int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *capture) {
 #	define OPT_SET(x_dest, x_value) { \
 			x_dest = x_value; \
 			break; \
@@ -161,10 +153,6 @@ int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *captur
 			case _O_DRM_RESOLUTION:		OPT_RESOLUTION("--drm-resolution", drm->requested_width, drm->requested_height, true);
 			case _O_DRM_FPS:			OPT_NUMBER("--drm-rate", drm->requested_rate, 0, 60000, 0);
 
-			case _O_AUDIO_DEV_IN:		OPT_SET(audstream->dev_in_name, optarg);
-			case _O_AUDIO_DEV_OUT:		OPT_SET(audstream->dev_out_name, optarg);
-			case _O_AUDIO_BUFFERS:		OPT_NUMBER("--abuffers", audstream->buffer_size, 1, 1024, 50)
-
 			case _O_LOG_LEVEL:			OPT_NUMBER("--log-level", us_g_log_level, US_LOG_LEVEL_INFO, US_LOG_LEVEL_DEBUG, 0);
 			case _O_PERF:				OPT_SET(us_g_log_level, US_LOG_LEVEL_PERF);
 			case _O_VERBOSE:			OPT_SET(us_g_log_level, US_LOG_LEVEL_VERBOSE);
@@ -173,7 +161,7 @@ int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *captur
 			case _O_FORCE_LOG_COLORS:	OPT_SET(us_g_log_colored, true);
 			case _O_NO_LOG_COLORS:		OPT_SET(us_g_log_colored, false);
 
-			case _O_HELP:		_help(stdout, drm, capture, audstream); return 1;
+			case _O_HELP:		_help(stdout, drm, capture); return 1;
 			case _O_VERSION:	puts(US_VERSION); return 1;
 
 			case 0:		break;
@@ -193,7 +181,7 @@ int options_parse(us_options_s *options, us_drm_t *drm, us_capturesink_t *captur
 	return 0;
 }
 
-static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture, const us_audstream_s* audstream) {
+static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture) {
 #	define SAY(x_msg, ...) fprintf(fp, x_msg "\n", ##__VA_ARGS__)
 	SAY("\nuStreamer-FBcpy - uStreamer raw sink adapter to write to the framebuffer");
 	SAY("═══════════════════════════════════════════════════");
@@ -207,13 +195,6 @@ static void _help(FILE *fp, const us_drm_t *drm, const us_capturesink_t *capture
 	SAY("    -d|--drm-device </dev/path>  ───────── Path to darm card. Default: %s.\n", drm->card_path);
 	SAY("    -r|--drm-resolution <WxH>  ─────────── Resolution to use. Default: %dx%d.\n", drm->requested_width, drm->requested_height);
 	SAY("    -f|--drm-rate mHz  ─────────────────── Refresh rate to use. Default: %d.\n", drm->requested_rate);
-
-	SAY("Audio options:");
-	SAY("══════════════════");
-	SAY("    -adin <name>  ─────────── Name of the input device. Default: %s.\n", audstream->dev_in_name);
-	SAY("    -adout <name>  ────────── Name of the output device. Default: %s.\n", audstream->dev_out_name);
-	SAY("    -abuffers <N>  ────────── Numer for frames to store in the buffer. Default: %d.\n", audstream->buffer_size);
-	
 
 	SAY("Logging options:");
 	SAY("════════════════");

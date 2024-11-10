@@ -67,7 +67,7 @@ void fast_unpack(unsigned char* rgba, const unsigned char* rgb, const int count)
 
 
 // Get the human-readable string from a DRM connector type. This is compatible with Weston's connector naming.
-static const char *drm_conn_str(uint32_t conn_type) {
+const char *drm_conn_str(uint32_t conn_type) {
 	switch (conn_type) {
 		case DRM_MODE_CONNECTOR_Unknown:     return "Unknown";
 		case DRM_MODE_CONNECTOR_VGA:         return "VGA";
@@ -89,7 +89,7 @@ static const char *drm_conn_str(uint32_t conn_type) {
 		default:                             return "Unknown";
 	}
 }
-static int drm_mode_refresh_rate(drmModeModeInfo *mode) {
+int drm_mode_refresh_rate(drmModeModeInfo *mode) {
 	int res = (mode->clock * 1000000LL / mode->htotal + mode->vtotal / 2) / mode->vtotal;
 
 	if (mode->flags & DRM_MODE_FLAG_INTERLACE) { res *= 2; }
